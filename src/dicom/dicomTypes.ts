@@ -22,6 +22,7 @@ export interface DicomMetadata {
   patientId?: string;
   patientSex?: string;
   patientAge?: string;
+  specificCharacterSet?: string;
   studyInstanceUID?: string;
   studyDate?: string;
   studyTime?: string;
