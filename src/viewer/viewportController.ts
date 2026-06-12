@@ -11,6 +11,7 @@ type RenderingEngineConstructor = new (id: string) => RenderingEngineLike;
 interface RenderingEngineLike {
   enableElement(input: unknown): void;
   getViewport(viewportId: string): unknown;
+  resize?(immediate?: boolean, keepCamera?: boolean): void;
   destroy(): void;
 }
 
@@ -30,6 +31,7 @@ interface CoreModuleLike {
 
 export interface ActiveViewportController {
   imageId: string;
+  resize(): void;
   dispose(): void;
 }
 
@@ -79,6 +81,7 @@ export async function renderDicomFileToElement(
 
     return ok({
       imageId: imageIdResult.value,
+      resize: () => renderingEngine.resize?.(true, true),
       dispose: () => renderingEngine.destroy()
     });
   } catch (cause) {
