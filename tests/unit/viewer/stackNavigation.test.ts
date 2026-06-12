@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { getNextStackIndex } from '@/viewer/stackNavigation';
+import {
+  getNextSeriesFileId,
+  getNextStackIndex
+} from '@/viewer/stackNavigation';
 
 describe('stackNavigation', () => {
   it('clamps navigation inside stack bounds', () => {
@@ -11,5 +14,31 @@ describe('stackNavigation', () => {
 
   it('returns -1 for empty stacks', () => {
     expect(getNextStackIndex(0, 0, 1)).toBe(-1);
+  });
+
+  it('navigates within the active series only', () => {
+    const studies = [
+      {
+        studyInstanceUID: 'study',
+        series: [
+          {
+            seriesInstanceUID: 'series-1',
+            instances: [
+              { fileId: 'a', metadata: {} },
+              { fileId: 'b', metadata: {} }
+            ]
+          },
+          {
+            seriesInstanceUID: 'series-2',
+            instances: [{ fileId: 'c', metadata: {} }]
+          }
+        ]
+      }
+    ];
+
+    expect(getNextSeriesFileId(studies, 'a', 1)).toBe('b');
+    expect(getNextSeriesFileId(studies, 'b', 1)).toBe('b');
+    expect(getNextSeriesFileId(studies, 'b', -1)).toBe('a');
+    expect(getNextSeriesFileId(studies, 'missing', 1)).toBeUndefined();
   });
 });

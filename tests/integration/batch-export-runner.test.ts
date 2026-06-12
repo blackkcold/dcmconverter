@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { LocalDicomFile } from '@/dicom/dicomTypes';
 import { SerialBatchExportRunner } from '@/export/batchExportRunner';
 import { DEFAULT_EXPORT_OPTIONS } from '@/export/exportTypes';
+import type {
+  FileSystemDirectoryHandleLike,
+  WritableFileStreamLike
+} from '@/export/fileSystemAccess';
 
 function localFile(id: string): LocalDicomFile {
   return {
@@ -24,6 +28,55 @@ function mockCanvas(): HTMLCanvasElement {
       callback(new Blob(['jpeg'], { type: 'image/jpeg' }))
     )
   } as unknown as HTMLCanvasElement;
+}
+
+class MockFileHandle {
+  constructor(
+    private readonly path: string,
+    private readonly writes: Map<string, Blob | BufferSource | string>
+  ) {}
+
+  async getFile(): Promise<File> {
+    return new File([], this.path);
+  }
+
+  async createWritable(): Promise<WritableFileStreamLike> {
+    return {
+      write: async (data) => {
+        this.writes.set(this.path, data);
+      },
+      close: async () => undefined
+    };
+  }
+}
+
+class MockDirectoryHandle implements FileSystemDirectoryHandleLike {
+  readonly directories = new Map<string, MockDirectoryHandle>();
+
+  constructor(
+    readonly name: string,
+    private readonly path: string,
+    private readonly writes: Map<string, Blob | BufferSource | string>
+  ) {}
+
+  async getFileHandle(name: string): Promise<MockFileHandle> {
+    return new MockFileHandle(this.join(name), this.writes);
+  }
+
+  async getDirectoryHandle(name: string): Promise<MockDirectoryHandle> {
+    const existing = this.directories.get(name);
+    if (existing) {
+      return existing;
+    }
+
+    const directory = new MockDirectoryHandle(name, this.join(name), this.writes);
+    this.directories.set(name, directory);
+    return directory;
+  }
+
+  private join(name: string): string {
+    return this.path ? `${this.path}/${name}` : name;
+  }
 }
 
 describe('SerialBatchExportRunner', () => {
@@ -82,6 +135,7 @@ describe('SerialBatchExportRunner', () => {
         status: 'success' as const,
         batchIndex: 0,
         outputFileName: 'a.jpg',
+        outputRelativePath: 'a.jpg',
         sourceRelativePath: 'a.dcm',
         retryCount: 0,
         metadataHash: 'metadata',
@@ -93,6 +147,7 @@ describe('SerialBatchExportRunner', () => {
         status: 'failed' as const,
         batchIndex: 0,
         outputFileName: 'b.jpg',
+        outputRelativePath: 'b.jpg',
         sourceRelativePath: 'b.dcm',
         retryCount: 1,
         metadataHash: 'metadata',
@@ -118,5 +173,45 @@ describe('SerialBatchExportRunner', () => {
     expect(rendered).toEqual(['b']);
     expect(result.jobs).toHaveLength(1);
     expect(result.jobs[0]?.retryCount).toBe(2);
+  });
+
+  it('writes folder exports to the job output relative path', async () => {
+    const writes = new Map<string, Blob | BufferSource | string>();
+    const directoryHandle = new MockDirectoryHandle('root', '', writes);
+    const file = localFile('file_a');
+    const runner = new SerialBatchExportRunner({
+      files: [file],
+      studies: [],
+      metadataByFileId: {
+        [file.id]: {
+          studyDate: '20260612',
+          studyInstanceUID: 'study-a',
+          seriesInstanceUID: 'series-a',
+          seriesNumber: 1,
+          modality: 'CT',
+          instanceNumber: 1
+        }
+      },
+      options: {
+        ...DEFAULT_EXPORT_OPTIONS,
+        exportMode: 'folder',
+        scope: 'all',
+        includePersonalInfo: false,
+        resumeMode: false
+      },
+      directoryHandle,
+      renderer: async () => mockCanvas()
+    });
+
+    const result = await runner.run();
+
+    expect(result.jobs[0]?.outputRelativePath).toBe(
+      'Study_20260612_study-a/S001_CT_series-a/0001_20260612_CT_S001_I0001_a.jpg'
+    );
+    expect(
+      writes.has(
+        'Study_20260612_study-a/S001_CT_series-a/0001_20260612_CT_S001_I0001_a.jpg'
+      )
+    ).toBe(true);
   });
 });

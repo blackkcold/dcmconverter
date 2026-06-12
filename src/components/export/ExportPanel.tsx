@@ -168,6 +168,22 @@ export function ExportPanel() {
         </div>
       ) : null}
       <label>
+        目录结构
+        <select
+          value={options.outputLayout}
+          onChange={(event) =>
+            setOptions({
+              outputLayout: event.target.value as typeof options.outputLayout
+            })
+          }
+        >
+          <option value="series">按 Study / Series 分文件夹</option>
+          <option value="seriesSource">按 Series + 来源子目录</option>
+          <option value="source">保留来源子目录</option>
+          <option value="flat">平铺到同一目录</option>
+        </select>
+      </label>
+      <label>
         JPEG 质量 {options.jpegQuality.toFixed(2)}
         <input
           type="range"

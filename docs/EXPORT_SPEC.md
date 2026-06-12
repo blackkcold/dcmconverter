@@ -6,7 +6,10 @@
 - 默认质量：`0.92`
 - 首选输出：用户选择的目标文件夹
 - 备用输出：ZIP
-- 文件名格式：`{StudyDate}_{PatientID}_{Modality}_S{SeriesNumber}_I{InstanceNumber}_{fileId}.jpg`
+- 默认目录结构：`Study_{StudyDate}_{StudyUID短码}/S{SeriesNumber}_{Modality}_{SeriesUID短码}/`
+- 可选目录结构：平铺、按 Study/Series、保留来源子目录、按 Series + 来源子目录
+- 文件名格式：`{序号}_{StudyDate}_{PatientID}_{Modality}_S{SeriesNumber}_I{InstanceNumber}_{fileId}.jpg`
+- 序号按输出目录分别递增，保证文件管理器按名称排序时符合 DICOM 顺序。
 
 ## 批量导出
 

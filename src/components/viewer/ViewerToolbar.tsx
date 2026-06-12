@@ -1,7 +1,9 @@
+import { useActiveDicomMetadata } from '@/store/useDicomStore';
 import { useViewerStore } from '@/store/useViewerStore';
 import { adjustWindowLevel, normalizeWindowLevel } from '@/viewer/windowLevel';
 
 export function ViewerToolbar() {
+  const metadata = useActiveDicomMetadata();
   const {
     windowCenter,
     windowWidth,
@@ -10,7 +12,10 @@ export function ViewerToolbar() {
     setZoom,
     resetViewport
   } = useViewerStore();
-  const normalized = normalizeWindowLevel(windowCenter, windowWidth);
+  const normalized = normalizeWindowLevel(
+    windowCenter ?? metadata?.windowCenter,
+    windowWidth ?? metadata?.windowWidth
+  );
 
   return (
     <div className="viewer-toolbar" aria-label="Viewer controls">
@@ -65,6 +70,9 @@ export function ViewerToolbar() {
       </button>
       <span>
         WC {normalized.center} / WW {normalized.width} · Zoom {zoom.toFixed(1)}
+      </span>
+      <span className="toolbar-hint">
+        WC 调整亮度基准；WW 调整灰阶范围，越小对比越强。
       </span>
     </div>
   );

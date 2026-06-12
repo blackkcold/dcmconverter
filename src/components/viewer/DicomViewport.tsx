@@ -4,9 +4,14 @@ import {
   type ActiveViewportController,
   renderDicomFileToElement
 } from '@/viewer/viewportController';
-import { normalizeWindowLevel } from '@/viewer/windowLevel';
-import { useActiveDicomFile, useActiveDicomMetadata } from '@/store/useDicomStore';
+import { DEFAULT_WINDOW_LEVEL, normalizeWindowLevel } from '@/viewer/windowLevel';
+import {
+  useActiveDicomFile,
+  useActiveDicomMetadata,
+  useDicomStore
+} from '@/store/useDicomStore';
 import { useViewerStore } from '@/store/useViewerStore';
+import { getNextSeriesFileId } from '@/viewer/stackNavigation';
 
 interface ViewportSize {
   width: number;
@@ -22,8 +27,10 @@ export function DicomViewport() {
   const stageRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<ActiveViewportController | undefined>(undefined);
+  const normalizedRef = useRef(DEFAULT_WINDOW_LEVEL);
   const activeFile = useActiveDicomFile();
   const metadata = useActiveDicomMetadata();
+  const { activeFileId, studies, setActiveFileId } = useDicomStore();
   const { windowCenter, windowWidth, zoom } = useViewerStore();
   const [status, setStatus] = useState('等待导入 DICOM');
   const [stageSize, setStageSize] = useState<ViewportSize>({
@@ -34,6 +41,8 @@ export function DicomViewport() {
     windowCenter ?? metadata?.windowCenter,
     windowWidth ?? metadata?.windowWidth
   );
+  const normalizedCenter = normalized.center;
+  const normalizedWidth = normalized.width;
   const imageSize = getImageSize(metadata);
   const frameSize = imageSize
     ? getFittedFrameSize(imageSize, stageSize)
@@ -81,6 +90,35 @@ export function DicomViewport() {
   }, [frameSize?.width, frameSize?.height]);
 
   useEffect(() => {
+    normalizedRef.current = {
+      center: normalizedCenter,
+      width: normalizedWidth
+    };
+    controllerRef.current?.setWindowLevel(normalizedCenter, normalizedWidth);
+  }, [normalizedCenter, normalizedWidth]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isStackNavigationKey(event.key) || shouldIgnoreKeyboardTarget(event.target)) {
+        return;
+      }
+
+      const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+      const nextFileId = getNextSeriesFileId(studies, activeFileId, direction);
+
+      if (!nextFileId || nextFileId === activeFileId) {
+        return;
+      }
+
+      event.preventDefault();
+      setActiveFileId(nextFileId);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeFileId, setActiveFileId, studies]);
+
+  useEffect(() => {
     const host = hostRef.current;
     if (!host || !activeFile) {
       return;
@@ -104,6 +142,11 @@ export function DicomViewport() {
         controllerRef.current = result.value;
         cleanup = result.value.dispose;
         setStatus(`已加载 ${activeFile.name}`);
+        const currentWindowLevel = normalizedRef.current;
+        result.value.setWindowLevel(
+          currentWindowLevel.center,
+          currentWindowLevel.width
+        );
         result.value.resize();
         return;
       }
@@ -138,6 +181,27 @@ export function DicomViewport() {
       </div>
     </div>
   );
+}
+
+function isStackNavigationKey(key: string): key is 'ArrowDown' | 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' {
+  return (
+    key === 'ArrowRight' ||
+    key === 'ArrowDown' ||
+    key === 'ArrowLeft' ||
+    key === 'ArrowUp'
+  );
+}
+
+function shouldIgnoreKeyboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  return ['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName);
 }
 
 function getImageSize(

@@ -17,6 +17,7 @@ interface DicomStore {
   addFiles(files: LocalDicomFile[], skippedFiles: SkippedFile[]): void;
   setMetadata(fileId: string, metadata: DicomMetadata): void;
   setActiveFileId(fileId: string): void;
+  removeFiles(fileIds: readonly string[]): void;
   clear(): void;
 }
 
@@ -50,6 +51,33 @@ export const useDicomStore = create<DicomStore>((set) => ({
       };
     }),
   setActiveFileId: (fileId) => set({ activeFileId: fileId }),
+  removeFiles: (fileIds) =>
+    set((state) => {
+      const removedFileIds = new Set(fileIds);
+      if (removedFileIds.size === 0) {
+        return state;
+      }
+
+      const files = state.files.filter((file) => !removedFileIds.has(file.id));
+      const metadataByFileId = Object.fromEntries(
+        Object.entries(state.metadataByFileId).filter(
+          ([fileId]) => !removedFileIds.has(fileId)
+        )
+      );
+      const activeFileId = selectNextActiveFileAfterRemoval(
+        state.files,
+        files,
+        state.activeFileId,
+        removedFileIds
+      );
+
+      return {
+        files,
+        metadataByFileId,
+        activeFileId,
+        studies: groupDicomFiles(files, metadataByFileId)
+      };
+    }),
   clear: () =>
     set({
       files: [],
@@ -72,4 +100,27 @@ export function useActiveDicomMetadata(): DicomMetadata | undefined {
 
 function dedupeFiles(files: LocalDicomFile[]): LocalDicomFile[] {
   return Array.from(new Map(files.map((file) => [file.id, file])).values());
+}
+
+export function selectNextActiveFileAfterRemoval(
+  previousFiles: readonly LocalDicomFile[],
+  remainingFiles: readonly LocalDicomFile[],
+  activeFileId: string | undefined,
+  removedFileIds: ReadonlySet<string>
+): string | undefined {
+  if (!activeFileId) {
+    return remainingFiles[0]?.id;
+  }
+
+  if (!removedFileIds.has(activeFileId)) {
+    return activeFileId;
+  }
+
+  const previousIndex = previousFiles.findIndex((file) => file.id === activeFileId);
+  if (previousIndex < 0) {
+    return remainingFiles[0]?.id;
+  }
+
+  const fallbackIndex = Math.min(previousIndex, remainingFiles.length - 1);
+  return fallbackIndex >= 0 ? remainingFiles[fallbackIndex]?.id : undefined;
 }

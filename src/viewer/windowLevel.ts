@@ -28,3 +28,18 @@ export function adjustWindowLevel(
     width: Math.max(1, current.width + deltaWidth)
   };
 }
+
+export interface VoiRange {
+  lower: number;
+  upper: number;
+}
+
+export function windowLevelToVoiRange(windowLevel: WindowLevel): VoiRange {
+  const normalized = normalizeWindowLevel(windowLevel.center, windowLevel.width);
+  const halfWidth = normalized.width / 2;
+
+  return {
+    lower: normalized.center - halfWidth,
+    upper: normalized.center + halfWidth
+  };
+}
