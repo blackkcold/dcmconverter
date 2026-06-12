@@ -8,6 +8,11 @@
   text-rendering: optimizeLegibility;
 }
 
+html,
+#root {
+  height: 100%;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -15,7 +20,8 @@
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 button,
@@ -43,9 +49,11 @@ button:disabled {
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .app-header {
@@ -84,21 +92,23 @@ button:disabled {
 }
 
 .workspace-grid {
-  flex: 1;
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(360px, 1fr) minmax(280px, 340px);
   gap: 1px;
   background: #dbe3ee;
   min-height: 0;
+  overflow: hidden;
 }
 
 .left-panel,
 .right-panel,
 .viewer-panel {
   min-width: 0;
+  min-height: 0;
   background: #f8fafc;
   padding: 1rem;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .left-panel,
@@ -106,6 +116,10 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.right-panel {
+  overflow: auto;
 }
 
 .viewer-panel {
@@ -127,7 +141,17 @@ button:disabled {
 }
 
 .grow {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.left-panel > .tool-section:not(.grow) {
+  flex: 0 0 auto;
+}
+
+.left-panel .grow {
+  display: flex;
+  flex-direction: column;
 }
 
 .button-row,
@@ -158,6 +182,13 @@ button:disabled {
   margin: 0.35rem 0;
 }
 
+.study-tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
 .study-tree summary {
   cursor: pointer;
   font-weight: 600;
@@ -182,17 +213,33 @@ button:disabled {
   background: #dbeafe !important;
 }
 
+.skipped-files {
+  flex: 0 0 auto;
+  max-height: 9rem;
+  overflow: auto;
+}
+
 .viewer-toolbar {
+  flex: 0 0 auto;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 0.65rem;
 }
 
+.viewport-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
 .viewport-wrap {
   position: relative;
-  flex: 1;
-  min-height: 520px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   border-radius: 8px;
   background: #05070c;
@@ -201,7 +248,7 @@ button:disabled {
 .dicom-viewport {
   width: 100%;
   height: 100%;
-  min-height: 520px;
+  min-height: 0;
   transform-origin: center;
 }
 
@@ -209,7 +256,8 @@ button:disabled {
   color: #94a3b8;
   display: grid;
   place-items: center;
-  min-height: 520px;
+  height: 100%;
+  min-height: 0;
   margin: 0;
 }
 
@@ -272,11 +320,14 @@ button:disabled {
 @media (max-width: 1100px) {
   .workspace-grid {
     grid-template-columns: 1fr;
+    overflow: auto;
   }
 
-  .viewport-wrap,
-  .dicom-viewport,
-  .viewport-placeholder {
+  .left-panel {
+    max-height: min(60vh, 520px);
+  }
+
+  .viewer-panel {
     min-height: 420px;
   }
 }

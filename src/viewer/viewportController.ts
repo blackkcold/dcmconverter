@@ -10,11 +10,12 @@ type RenderingEngineConstructor = new (id: string) => RenderingEngineLike;
 interface RenderingEngineLike {
   enableElement(input: unknown): void;
   getViewport(viewportId: string): unknown;
+  resize?(immediate?: boolean, keepCamera?: boolean): void;
   destroy(): void;
 }
 
 interface StackViewportLike {
-  setStack(imageIds: string[], activeImageId?: string): void | Promise<void>;
+  setStack(imageIds: string[], currentImageIdIndex?: number): void | Promise<void>;
   render(): void;
 }
 
@@ -29,6 +30,7 @@ interface CoreModuleLike {
 
 export interface ActiveViewportController {
   imageId: string;
+  resize(): void;
   dispose(): void;
 }
 
@@ -73,11 +75,12 @@ export async function renderDicomFileToElement(
     });
 
     const viewport = renderingEngine.getViewport(viewportId) as StackViewportLike;
-    await viewport.setStack([imageIdResult.value], imageIdResult.value);
+    await viewport.setStack([imageIdResult.value], 0);
     viewport.render();
 
     return ok({
       imageId: imageIdResult.value,
+      resize: () => renderingEngine.resize?.(true, true),
       dispose: () => renderingEngine.destroy()
     });
   } catch (cause) {
