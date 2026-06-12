@@ -11,6 +11,7 @@ const METADATA_ROWS = [
   ['Instance No.', 'instanceNumber'],
   ['Rows', 'rows'],
   ['Columns', 'columns'],
+  ['Character Set', 'specificCharacterSet'],
   ['Transfer Syntax', 'transferSyntaxUID']
 ] as const;
 

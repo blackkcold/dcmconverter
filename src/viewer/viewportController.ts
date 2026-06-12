@@ -2,6 +2,7 @@ import { initializeCornerstone } from '@/dicom/cornerstoneInit';
 import { addFileToCornerstoneFileManager } from '@/dicom/dicomFileManager';
 import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
+import { log } from '@/utils/logger';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
 
@@ -14,7 +15,7 @@ interface RenderingEngineLike {
 }
 
 interface StackViewportLike {
-  setStack(imageIds: string[], activeImageId?: string): void | Promise<void>;
+  setStack(imageIds: string[], currentImageIdIndex?: number): void | Promise<void>;
   render(): void;
 }
 
@@ -73,7 +74,7 @@ export async function renderDicomFileToElement(
     });
 
     const viewport = renderingEngine.getViewport(viewportId) as StackViewportLike;
-    await viewport.setStack([imageIdResult.value], imageIdResult.value);
+    await viewport.setStack([imageIdResult.value], 0);
     viewport.render();
 
     return ok({
@@ -81,6 +82,15 @@ export async function renderDicomFileToElement(
       dispose: () => renderingEngine.destroy()
     });
   } catch (cause) {
+    log({
+      level: 'error',
+      message: 'Failed to render DICOM viewport',
+      context: {
+        imageId: imageIdResult.value,
+        cause
+      }
+    });
+
     return err(
       createAppError('VIEWPORT_RENDER_FAILED', 'Failed to render DICOM viewport', {
         cause
