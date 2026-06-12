@@ -1,0 +1,282 @@
+:root {
+  color: #1f2937;
+  background: #f5f7fb;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+button {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: #64748b;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.app-header p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+}
+
+.header-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.header-stats span,
+.count {
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.workspace-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(360px, 1fr) minmax(280px, 340px);
+  gap: 1px;
+  background: #dbe3ee;
+  min-height: 0;
+}
+
+.left-panel,
+.right-panel,
+.viewer-panel {
+  min-width: 0;
+  background: #f8fafc;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.left-panel,
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.viewer-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tool-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.9rem;
+}
+
+.tool-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.grow {
+  flex: 1;
+}
+
+.button-row,
+.viewer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.muted,
+.empty-state,
+.inline-status {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.privacy-warning {
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.88rem;
+}
+
+.study-tree details {
+  margin: 0.35rem 0;
+}
+
+.study-tree summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.study-tree ul,
+.skipped-files ul,
+.job-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+}
+
+.study-tree button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+}
+
+.tree-active {
+  background: #dbeafe !important;
+}
+
+.viewer-toolbar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem;
+}
+
+.viewport-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 520px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #05070c;
+}
+
+.dicom-viewport {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  transform-origin: center;
+}
+
+.viewport-placeholder {
+  color: #94a3b8;
+  display: grid;
+  place-items: center;
+  min-height: 520px;
+  margin: 0;
+}
+
+.viewport-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.8rem;
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.76);
+  font-size: 0.85rem;
+}
+
+.metadata-list {
+  margin: 0;
+}
+
+.metadata-list div,
+.job-list li {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.7fr) 1fr;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.metadata-list dt {
+  color: #64748b;
+}
+
+.metadata-list dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.tool-section label {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.65rem 0;
+}
+
+.checkbox-row {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+}
+
+.status-bar {
+  padding: 0.55rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 1100px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .viewport-wrap,
+  .dicom-viewport,
+  .viewport-placeholder {
+    min-height: 420px;
+  }
+}
