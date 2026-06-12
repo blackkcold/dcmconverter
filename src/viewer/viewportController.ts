@@ -4,6 +4,7 @@ import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
+import { windowLevelToVoiRange } from '@/viewer/windowLevel';
 
 type RenderingEngineConstructor = new (id: string) => RenderingEngineLike;
 
@@ -16,6 +17,10 @@ interface RenderingEngineLike {
 
 interface StackViewportLike {
   setStack(imageIds: string[], currentImageIdIndex?: number): void | Promise<void>;
+  setProperties?(
+    properties?: { voiRange?: { lower: number; upper: number } },
+    suppressEvents?: boolean
+  ): void;
   render(): void;
 }
 
@@ -30,6 +35,7 @@ interface CoreModuleLike {
 
 export interface ActiveViewportController {
   imageId: string;
+  setWindowLevel(center: number, width: number): void;
   resize(): void;
   dispose(): void;
 }
@@ -80,6 +86,15 @@ export async function renderDicomFileToElement(
 
     return ok({
       imageId: imageIdResult.value,
+      setWindowLevel: (center, width) => {
+        viewport.setProperties?.(
+          {
+            voiRange: windowLevelToVoiRange({ center, width })
+          },
+          true
+        );
+        viewport.render();
+      },
       resize: () => renderingEngine.resize?.(true, true),
       dispose: () => renderingEngine.destroy()
     });

@@ -13,6 +13,7 @@ function job(fileId: string, optionsHash = 'options'): ExportJob {
     status: 'pending',
     batchIndex: 0,
     outputFileName: `${fileId}.jpg`,
+    outputRelativePath: `${fileId}.jpg`,
     sourceRelativePath: `${fileId}.dcm`,
     retryCount: 0,
     metadataHash: 'metadata',

@@ -16,8 +16,25 @@ describe('fileNamer', () => {
       'file_ab12cd'
     );
 
-    expect(name).toBe('20260612_CT_S3_I42_ab12cd.jpg');
+    expect(name).toBe('20260612_CT_S003_I0042_ab12cd.jpg');
     expect(name).not.toContain('Secret');
+  });
+
+  it('adds directory-local sequence prefixes when provided', () => {
+    const name = createJpegFileName(
+      {
+        studyDate: '20260612',
+        modality: 'MR',
+        seriesNumber: 1,
+        instanceNumber: 7
+      },
+      'file_ab12cd',
+      new Set(),
+      false,
+      12
+    );
+
+    expect(name).toBe('0012_20260612_MR_S001_I0007_ab12cd.jpg');
   });
 
   it('adds suffixes for duplicate names', () => {

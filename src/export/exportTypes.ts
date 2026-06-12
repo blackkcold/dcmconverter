@@ -1,6 +1,7 @@
 export interface ExportOptions {
   scope: 'current' | 'series' | 'all';
   exportMode: 'folder' | 'zip';
+  outputLayout: 'flat' | 'series' | 'source' | 'seriesSource';
   jpegQuality: number;
   includeOverlay: boolean;
   anonymizeOverlay: boolean;
@@ -17,6 +18,7 @@ export interface ExportJob {
   status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
   batchIndex: number;
   outputFileName: string;
+  outputRelativePath: string;
   sourceRelativePath: string;
   retryCount: number;
   metadataHash: string;
@@ -36,6 +38,7 @@ export interface JpegExportResult {
 export const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   scope: 'current',
   exportMode: 'folder',
+  outputLayout: 'series',
   jpegQuality: 0.92,
   includeOverlay: true,
   anonymizeOverlay: true,

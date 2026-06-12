@@ -213,13 +213,13 @@ export class SerialBatchExportRunner {
 
         await writeBlobToDirectory(
           this.params.directoryHandle,
-          job.outputFileName,
+          job.outputRelativePath,
           encoded.value
         );
       } else {
         zipResults.push({
           fileId: job.fileId,
-          fileName: job.outputFileName,
+          fileName: job.outputRelativePath,
           blob: encoded.value
         });
       }

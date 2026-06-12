@@ -19,6 +19,10 @@ export interface FileSystemDirectoryHandleLike {
     name: string,
     options?: { create?: boolean }
   ): Promise<FileSystemFileHandleLike>;
+  getDirectoryHandle?(
+    name: string,
+    options?: { create?: boolean }
+  ): Promise<FileSystemDirectoryHandleLike>;
 }
 
 interface WindowWithDirectoryPicker extends Window {
@@ -70,10 +74,14 @@ export async function requestExportDirectory(): Promise<
 
 export async function writeBlobToDirectory(
   directoryHandle: FileSystemDirectoryHandleLike,
-  fileName: string,
+  relativePath: string,
   blob: Blob
 ): Promise<void> {
-  const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+  const { directory, fileName } = await resolveDirectoryForRelativePath(
+    directoryHandle,
+    relativePath
+  );
+  const fileHandle = await directory.getFileHandle(fileName, { create: true });
   const writable = await fileHandle.createWritable();
   await writable.write(blob);
   await writable.close();
@@ -103,4 +111,30 @@ export async function readTextFromDirectory(
 
 function getDirectoryPicker(): WindowWithDirectoryPicker['showDirectoryPicker'] {
   return (window as WindowWithDirectoryPicker).showDirectoryPicker;
+}
+
+async function resolveDirectoryForRelativePath(
+  rootDirectory: FileSystemDirectoryHandleLike,
+  relativePath: string
+): Promise<{ directory: FileSystemDirectoryHandleLike; fileName: string }> {
+  const parts = relativePath.split('/').filter(Boolean);
+  const fileName = parts.at(-1);
+
+  if (!fileName || parts.some((part) => part === '.' || part === '..')) {
+    throw createAppError('ZIP_EXPORT_FAILED', 'Invalid export relative path');
+  }
+
+  let directory = rootDirectory;
+  for (const segment of parts.slice(0, -1)) {
+    if (!directory.getDirectoryHandle) {
+      throw createAppError(
+        'ZIP_EXPORT_FAILED',
+        '当前浏览器不支持创建分层导出目录，请改用 ZIP 或平铺导出。'
+      );
+    }
+
+    directory = await directory.getDirectoryHandle(segment, { create: true });
+  }
+
+  return { directory, fileName };
 }

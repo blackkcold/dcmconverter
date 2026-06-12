@@ -25,7 +25,8 @@ export function buildExportJobs(input: BuildExportJobsInput): {
   const sortedFiles = [...selectedFiles].sort((a, b) =>
     compareFilesByDicomOrder(a, b, input.metadataByFileId)
   );
-  const usedNames = new Set<string>();
+  const usedNamesByDirectory = new Map<string, Set<string>>();
+  const sequenceByDirectory = new Map<string, number>();
   const optionsHash = hashExportOptions(input.options);
   const datasetHash = hashDataset(sortedFiles);
 
@@ -35,18 +36,34 @@ export function buildExportJobs(input: BuildExportJobsInput): {
     jobs: sortedFiles.map((file, index) => {
       const metadata = input.metadataByFileId[file.id] ?? {};
       const metadataHash = hashJson(metadata);
+      const outputDirectory = createOutputDirectory(
+        file,
+        metadata,
+        input.options.outputLayout
+      );
+      const directoryKey = outputDirectory ?? '';
+      const sequenceNumber = (sequenceByDirectory.get(directoryKey) ?? 0) + 1;
+      sequenceByDirectory.set(directoryKey, sequenceNumber);
+
+      const usedNames = getUsedNamesForDirectory(
+        usedNamesByDirectory,
+        directoryKey
+      );
+      const outputFileName = createJpegFileName(
+        metadata,
+        file.id,
+        usedNames,
+        input.options.includePersonalInfo,
+        sequenceNumber
+      );
 
       return {
         id: `export_${file.id}`,
         fileId: file.id,
         status: 'pending',
         batchIndex: Math.floor(index / input.options.batchSize),
-        outputFileName: createJpegFileName(
-          metadata,
-          file.id,
-          usedNames,
-          input.options.includePersonalInfo
-        ),
+        outputFileName,
+        outputRelativePath: joinRelativePath(outputDirectory, outputFileName),
         sourceRelativePath: file.relativePath,
         retryCount: 0,
         metadataHash,
@@ -79,7 +96,8 @@ export function hashExportOptions(options: ExportOptions): string {
     anonymizeOverlay: options.anonymizeOverlay,
     includePersonalInfo: options.includePersonalInfo,
     overlayPosition: options.overlayPosition,
-    useCurrentWindowLevel: options.useCurrentWindowLevel
+    useCurrentWindowLevel: options.useCurrentWindowLevel,
+    outputLayout: options.outputLayout
   });
 }
 
@@ -130,6 +148,86 @@ function compareString(a?: string, b?: string): number {
 
 function compareNumber(a?: number, b?: number): number {
   return (a ?? Number.MAX_SAFE_INTEGER) - (b ?? Number.MAX_SAFE_INTEGER);
+}
+
+function createOutputDirectory(
+  file: LocalDicomFile,
+  metadata: DicomMetadata,
+  outputLayout: ExportOptions['outputLayout']
+): string | undefined {
+  if (outputLayout === 'flat') {
+    return undefined;
+  }
+
+  const seriesDirectory = createSeriesDirectory(metadata);
+  const sourceDirectory = getSourceDirectory(file.relativePath);
+
+  if (outputLayout === 'series') {
+    return seriesDirectory;
+  }
+
+  if (outputLayout === 'source') {
+    return sourceDirectory;
+  }
+
+  return joinRelativePath(seriesDirectory, sourceDirectory);
+}
+
+function createSeriesDirectory(metadata: DicomMetadata): string {
+  const studyDate = metadata.studyDate ?? 'unknown';
+  const studyId = shortCode(metadata.studyInstanceUID);
+  const seriesNumber =
+    metadata.seriesNumber !== undefined && Number.isFinite(metadata.seriesNumber)
+      ? Math.max(0, Math.floor(metadata.seriesNumber)).toString().padStart(3, '0')
+      : 'unknown';
+  const modality = metadata.modality ?? 'unknown';
+  const seriesId = shortCode(metadata.seriesInstanceUID);
+
+  return joinRelativePath(
+    safePathSegment(studyId ? `Study_${studyDate}_${studyId}` : `Study_${studyDate}`),
+    safePathSegment(`S${seriesNumber}_${modality}_${seriesId ?? 'unknown'}`)
+  );
+}
+
+function getSourceDirectory(relativePath: string): string | undefined {
+  const parts = relativePath.split('/').filter(Boolean).slice(0, -1);
+  const safeParts = parts.map(safePathSegment).filter(Boolean);
+
+  return safeParts.length > 0 ? safeParts.join('/') : undefined;
+}
+
+function shortCode(value: string | undefined): string | undefined {
+  const safeValue = value?.replace(/[^A-Za-z0-9.-]+/g, '');
+  if (!safeValue) {
+    return undefined;
+  }
+
+  return safeValue.slice(-8);
+}
+
+function safePathSegment(value: string): string {
+  return value.replace(/[^A-Za-z0-9_.-]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function joinRelativePath(
+  directory: string | undefined,
+  fileName: string | undefined
+): string {
+  return [directory, fileName].filter(Boolean).join('/');
+}
+
+function getUsedNamesForDirectory(
+  usedNamesByDirectory: Map<string, Set<string>>,
+  directoryKey: string
+): Set<string> {
+  const existing = usedNamesByDirectory.get(directoryKey);
+  if (existing) {
+    return existing;
+  }
+
+  const usedNames = new Set<string>();
+  usedNamesByDirectory.set(directoryKey, usedNames);
+  return usedNames;
 }
 
 function hashDataset(files: readonly LocalDicomFile[]): string {

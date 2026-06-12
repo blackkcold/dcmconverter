@@ -66,7 +66,7 @@ export function applyResumeManifest(
         (job) =>
           job.status === 'success' &&
           job.optionsHash === optionsHash &&
-          job.outputFileName.length > 0
+          job.outputRelativePath.length > 0
       )
       .map((job) => [job.fileId, job])
   );
@@ -81,6 +81,7 @@ export function applyResumeManifest(
       ...job,
       status: 'skipped',
       outputFileName: previous.outputFileName,
+      outputRelativePath: previous.outputRelativePath,
       ...(previous.startedAt ? { startedAt: previous.startedAt } : {}),
       ...(previous.finishedAt ? { finishedAt: previous.finishedAt } : {}),
       errorMessage: 'Skipped by resume manifest'
