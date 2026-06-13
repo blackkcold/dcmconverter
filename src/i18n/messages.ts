@@ -21,6 +21,8 @@ const zh = {
   'import.selectDirectory': '选择目录',
   'import.browserOnly': '浏览器仅能读取你主动选择的文件或目录；不会扫描磁盘路径。',
   'import.parsingMetadata': '正在解析 metadata...',
+  'import.dragDropHint': '或拖放 DICOM 文件/目录到此处',
+  'import.dragDropActive': '释放以导入',
 
   'tree.heading': '检查树',
   'tree.emptyState': '选择 DICOM 文件后会在这里显示 Study/Series。',
@@ -255,6 +257,8 @@ const en = {
   'import.browserOnly':
     'The browser can only read files or folders you explicitly choose; it never scans your disk.',
   'import.parsingMetadata': 'Parsing metadata...',
+  'import.dragDropHint': 'or drag DICOM files/folders here',
+  'import.dragDropActive': 'Drop to import',
 
   'tree.heading': 'Study Tree',
   'tree.emptyState': 'Select DICOM files and the Study/Series tree will appear here.',

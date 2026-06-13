@@ -197,6 +197,12 @@ button:disabled {
   font-size: 0.9rem;
 }
 
+.tool-section.drag-over {
+  border: 2px dashed #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
 .privacy-warning {
   border: 1px solid #f59e0b;
   background: #fffbeb;
