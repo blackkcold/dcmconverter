@@ -2,6 +2,7 @@ import { initializeCornerstone } from '@/dicom/cornerstoneInit';
 import { addFileToCornerstoneFileManager } from '@/dicom/dicomFileManager';
 import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
+import { log } from '@/utils/logger';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
 import { windowLevelToVoiRange } from '@/viewer/windowLevel';
@@ -99,6 +100,15 @@ export async function renderDicomFileToElement(
       dispose: () => renderingEngine.destroy()
     });
   } catch (cause) {
+    log({
+      level: 'error',
+      message: 'Failed to render DICOM viewport',
+      context: {
+        imageId: imageIdResult.value,
+        cause
+      }
+    });
+
     return err(
       createAppError('VIEWPORT_RENDER_FAILED', 'Failed to render DICOM viewport', {
         cause
