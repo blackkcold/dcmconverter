@@ -11,6 +11,76 @@ type DirectoryInputProps = InputHTMLAttributes<HTMLInputElement> & {
   directory?: string;
 };
 
+function readAllEntries(
+  reader: FileSystemDirectoryReader
+): Promise<FileSystemEntry[]> {
+  return new Promise((resolve, reject) => {
+    const result: FileSystemEntry[] = [];
+    const read = () => {
+      reader.readEntries((batch) => {
+        if (batch.length === 0) {
+          resolve(result);
+          return;
+        }
+        result.push(...batch);
+        read();
+      }, reject);
+    };
+    read();
+  });
+}
+
+function fileEntryToFile(entry: FileSystemFileEntry): Promise<File> {
+  return new Promise((resolve, reject) => entry.file(resolve, reject));
+}
+
+async function readDirectoryRecursive(
+  dirEntry: FileSystemDirectoryEntry
+): Promise<File[]> {
+  const entries = await readAllEntries(dirEntry.createReader());
+  const files: File[] = [];
+
+  for (const entry of entries) {
+    if (entry.isFile) {
+      const file = await fileEntryToFile(entry as FileSystemFileEntry);
+      Object.defineProperty(file, 'webkitRelativePath', {
+        value: entry.fullPath.slice(1),
+        configurable: true
+      });
+      files.push(file);
+    } else if (entry.isDirectory) {
+      files.push(
+        ...(await readDirectoryRecursive(entry as FileSystemDirectoryEntry))
+      );
+    }
+  }
+  return files;
+}
+
+async function getFilesFromDataTransfer(dt: DataTransfer): Promise<File[]> {
+  const files: File[] = [];
+  for (let i = 0; i < dt.items.length; i++) {
+    const item = dt.items[i];
+    if (!item || item.kind !== 'file') continue;
+
+    const entry = item.webkitGetAsEntry?.();
+    if (!entry) {
+      const file = item.getAsFile();
+      if (file) files.push(file);
+      continue;
+    }
+
+    if (entry.isFile) {
+      files.push(await fileEntryToFile(entry as FileSystemFileEntry));
+    } else if (entry.isDirectory) {
+      files.push(
+        ...(await readDirectoryRecursive(entry as FileSystemDirectoryEntry))
+      );
+    }
+  }
+  return files;
+}
+
 export function FileImportPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const directoryInputRef = useRef<HTMLInputElement>(null);
@@ -21,7 +91,7 @@ export function FileImportPanel() {
   const t = useTranslator();
 
   const processFiles = useCallback(
-    async (fileList: FileList | null) => {
+    async (fileList: readonly File[] | FileList | null) => {
       if (!fileList || fileList.length === 0) return;
 
       setBusy(true);
@@ -63,12 +133,18 @@ export function FileImportPanel() {
     setIsDragOver(false);
   }
 
-  function handleDrop(e: DragEvent) {
+  async function handleDrop(e: DragEvent) {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
     if (busy) return;
-    void processFiles(e.dataTransfer?.files ?? null);
+
+    const dt = e.dataTransfer;
+    if (!dt) return;
+
+    const files = await getFilesFromDataTransfer(dt);
+    if (files.length === 0) return;
+    await processFiles(files);
   }
 
   const directoryProps: DirectoryInputProps = {
