@@ -7,13 +7,9 @@
   <a href="https://github.com/blackkcold/dcmconverter/releases">
     <img alt="Releases" src="https://img.shields.io/github/v/release/blackkcold/dcmconverter?style=for-the-badge&label=Releases&color=0b7285">
   </a>
-  <a href="https://github.com/blackkcold/dcmconverter/actions/workflows/ci.yml">
-    <img alt="CI" src="https://github.com/blackkcold/dcmconverter/actions/workflows/ci.yml/badge.svg?branch=main">
+  <a href="LICENSE">
+    <img alt="License Valid" src="https://img.shields.io/badge/License-Valid-2ea44f?style=for-the-badge">
   </a>
-  <a href="https://github.com/blackkcold/dcmconverter/actions/workflows/pages.yml">
-    <img alt="GitHub Pages" src="https://github.com/blackkcold/dcmconverter/actions/workflows/pages.yml/badge.svg?branch=main">
-  </a>
-  <img alt="MIT License" src="https://img.shields.io/github/license/blackkcold/dcmconverter?style=for-the-badge&color=2ea44f">
 </p>
 
 > [!TIP]
