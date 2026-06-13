@@ -1,3 +1,5 @@
+import { createTranslator, getCurrentLocale, type Locale } from '@/i18n';
+
 export const SUPPORTED_TRANSFER_SYNTAXES = new Set<string>([
   '1.2.840.10008.1.2',
   '1.2.840.10008.1.2.1',
@@ -20,10 +22,9 @@ export function isSupportedTransferSyntax(uid?: string): boolean {
   return SUPPORTED_TRANSFER_SYNTAXES.has(uid.trim());
 }
 
-export function getUnsupportedTransferSyntaxMessage(): string {
-  return [
-    '该 DICOM 文件使用当前版本暂不支持的 Transfer Syntax。',
-    '文件未损坏，但当前浏览器端解码器无法处理。',
-    '请尝试未压缩 DICOM、JPEG Baseline、JPEG-LS、JPEG 2000 或 RLE 格式。'
-  ].join(' ');
+export function getUnsupportedTransferSyntaxMessage(
+  locale: Locale = getCurrentLocale()
+): string {
+  const t = createTranslator(locale);
+  return t('error.transferSyntaxUnsupported');
 }

@@ -1,9 +1,15 @@
 import type { DicomMetadata, LocalDicomFile } from '@/dicom/dicomTypes';
 import { applyPatientOverride } from '@/export/effectiveMetadata';
 import { renderOverlay } from '@/export/overlayRenderer';
-import { createAppError } from '@/utils/errors';
 import { normalizeWindowLevel } from '@/viewer/windowLevel';
 import type { WindowLevel } from '@/viewer/viewerTypes';
+import {
+  createLocalizedAppError,
+  createTranslator,
+  getCurrentLocale,
+  type Locale,
+  type Translator
+} from '@/i18n';
 
 import { buildExportJobs, splitIntoBatches } from './exportJobBuilder';
 import {
@@ -13,6 +19,11 @@ import {
   writeExportManifest
 } from './exportManifest';
 import { createExportReport, exportReportToCsv } from './exportReport';
+import {
+  createExportArchiveFileName,
+  joinRelativePath,
+  normalizeExportPackageName
+} from './exportNaming';
 import type {
   ExportJob,
   ExportManifest,
@@ -20,6 +31,7 @@ import type {
   JpegExportResult
 } from './exportTypes';
 import {
+  EXPORT_MANIFEST_FILE_NAME,
   EXPORT_REPORT_CSV_FILE_NAME,
   EXPORT_REPORT_JSON_FILE_NAME,
   writeBlobToDirectory,
@@ -43,6 +55,7 @@ export interface BatchExportRunnerParams {
   options: ExportOptions;
   directoryHandle?: FileSystemDirectoryHandleLike;
   currentWindowLevel?: WindowLevel;
+  locale?: Locale;
   previousJobs?: readonly ExportJob[];
   mode?: BatchExportRunMode;
   renderer?: DicomCanvasRenderer;
@@ -53,6 +66,7 @@ export interface BatchExportRunnerParams {
 export interface BatchExportResult {
   jobs: ExportJob[];
   zipBlob?: Blob;
+  zipFileName?: string;
   reportJson: string;
   reportCsv: string;
 }
@@ -61,24 +75,29 @@ export class SerialBatchExportRunner {
   private cancelled = false;
   private paused = false;
   private resumeWaiters: Array<() => void> = [];
+  private readonly locale: Locale;
+  private readonly t: Translator;
 
-  constructor(private readonly params: BatchExportRunnerParams) {}
+  constructor(private readonly params: BatchExportRunnerParams) {
+    this.locale = params.locale ?? getCurrentLocale();
+    this.t = createTranslator(this.locale);
+  }
 
   pause(): void {
     this.paused = true;
-    this.params.onMessage?.('已请求暂停，当前文件完成后暂停。');
+    this.params.onMessage?.(this.t('export.pauseRequested'));
   }
 
   resume(): void {
     this.paused = false;
     this.resumeWaiters.splice(0).forEach((resolve) => resolve());
-    this.params.onMessage?.('继续导出。');
+    this.params.onMessage?.(this.t('export.resumed'));
   }
 
   cancel(): void {
     this.cancelled = true;
     this.resume();
-    this.params.onMessage?.('已取消后续导出，已完成文件保留。');
+    this.params.onMessage?.(this.t('export.cancelled'));
   }
 
   async run(): Promise<BatchExportResult> {
@@ -119,13 +138,22 @@ export class SerialBatchExportRunner {
     optionsHash: string;
   }> {
     const built = buildExportJobs(this.params);
+    const exportPackageName = this.getExportPackageName();
     const manifest =
       this.params.options.exportMode === 'folder' &&
       this.params.options.resumeMode &&
       this.params.directoryHandle
-        ? await readExportManifest(this.params.directoryHandle)
+        ? await readExportManifest(
+            this.params.directoryHandle,
+            joinRelativePath(exportPackageName, EXPORT_MANIFEST_FILE_NAME)
+          )
         : undefined;
-    const resumedJobs = applyResumeManifest(built.jobs, manifest, built.optionsHash);
+    const resumedJobs = applyResumeManifest(
+      built.jobs,
+      manifest,
+      built.optionsHash,
+      this.locale
+    );
 
     if (this.params.mode !== 'failed') {
       return { ...built, jobs: resumedJobs };
@@ -171,7 +199,7 @@ export class SerialBatchExportRunner {
         startedAt,
         finishedAt: new Date().toISOString(),
         errorCode: 'FILE_READ_FAILED',
-        errorMessage: 'Source file is missing from the current session'
+        errorMessage: this.t('error.sourceFileMissing')
       });
       await this.syncManifest(jobs, manifest);
       return;
@@ -182,7 +210,12 @@ export class SerialBatchExportRunner {
     try {
       const windowLevel = this.resolveWindowLevel(metadata);
       const renderer = this.params.renderer ?? defaultDicomCanvasRenderer;
-      const canvas = await renderer({ localFile, metadata, windowLevel });
+      const canvas = await renderer({
+        localFile,
+        metadata,
+        windowLevel,
+        locale: this.locale
+      });
       const context = canvas.getContext('2d');
 
       if (this.params.options.includeOverlay && context) {
@@ -192,7 +225,8 @@ export class SerialBatchExportRunner {
           canvas.height,
           metadata,
           this.params.options,
-          windowLevel
+          windowLevel,
+          this.locale
         );
       }
 
@@ -203,9 +237,11 @@ export class SerialBatchExportRunner {
           ? createJpegMetadataPayload({
               metadata,
               windowLevel,
-              burnedInAnnotation: this.params.options.includeOverlay
+              burnedInAnnotation: this.params.options.includeOverlay,
+              locale: this.locale
             })
-          : undefined
+          : undefined,
+        this.locale
       );
 
       if (!encoded.ok) {
@@ -214,13 +250,18 @@ export class SerialBatchExportRunner {
 
       if (this.params.options.exportMode === 'folder') {
         if (!this.params.directoryHandle) {
-          throw createAppError('ZIP_EXPORT_FAILED', 'Missing export directory handle');
+          throw createLocalizedAppError(
+            this.locale,
+            'ZIP_EXPORT_FAILED',
+            'error.missingExportDirectoryHandle'
+          );
         }
 
         await writeBlobToDirectory(
           this.params.directoryHandle,
           job.outputRelativePath,
-          encoded.value
+          encoded.value,
+          this.locale
         );
       } else {
         zipResults.push({
@@ -246,7 +287,7 @@ export class SerialBatchExportRunner {
         errorCode: appError?.code ?? 'JPEG_EXPORT_FAILED',
         errorMessage:
           appError?.message ??
-          (error instanceof Error ? error.message : 'Export failed')
+          (error instanceof Error ? error.message : this.t('error.exportFailedFallback'))
       });
     }
 
@@ -263,7 +304,12 @@ export class SerialBatchExportRunner {
 
   private async writeManifestIfNeeded(manifest: ExportManifest): Promise<void> {
     if (this.params.options.exportMode === 'folder' && this.params.directoryHandle) {
-      await writeExportManifest(this.params.directoryHandle, manifest);
+      await writeExportManifest(
+        this.params.directoryHandle,
+        manifest,
+        joinRelativePath(this.getExportPackageName(), EXPORT_MANIFEST_FILE_NAME),
+        this.locale
+      );
     }
   }
 
@@ -283,13 +329,15 @@ export class SerialBatchExportRunner {
     const report = createExportReport(jobs);
     await writeTextToDirectory(
       this.params.directoryHandle,
-      EXPORT_REPORT_JSON_FILE_NAME,
-      JSON.stringify(report, null, 2)
+      joinRelativePath(this.getExportPackageName(), EXPORT_REPORT_JSON_FILE_NAME),
+      JSON.stringify(report, null, 2),
+      this.locale
     );
     await writeTextToDirectory(
       this.params.directoryHandle,
-      EXPORT_REPORT_CSV_FILE_NAME,
-      exportReportToCsv(report)
+      joinRelativePath(this.getExportPackageName(), EXPORT_REPORT_CSV_FILE_NAME),
+      exportReportToCsv(report),
+      this.locale
     );
   }
 
@@ -311,20 +359,32 @@ export class SerialBatchExportRunner {
         blob: result.blob
       })),
       {
-        fileName: EXPORT_REPORT_JSON_FILE_NAME,
+        fileName: joinRelativePath(
+          this.getExportPackageName(),
+          EXPORT_REPORT_JSON_FILE_NAME
+        ),
         blob: new Blob([reportJson], { type: 'application/json' })
       },
       {
-        fileName: EXPORT_REPORT_CSV_FILE_NAME,
+        fileName: joinRelativePath(
+          this.getExportPackageName(),
+          EXPORT_REPORT_CSV_FILE_NAME
+        ),
         blob: new Blob([reportCsv], { type: 'text/csv;charset=utf-8' })
       }
-    ]);
+    ], this.locale);
 
     if (!zip.ok) {
       throw zip.error;
     }
 
-    return { jobs, zipBlob: zip.value, reportJson, reportCsv };
+    return {
+      jobs,
+      zipBlob: zip.value,
+      zipFileName: createExportArchiveFileName(this.getExportPackageName()),
+      reportJson,
+      reportCsv
+    };
   }
 
   private updateJob(jobs: ExportJob[], jobId: string, patch: Partial<ExportJob>): void {
@@ -344,6 +404,10 @@ export class SerialBatchExportRunner {
 
   private emitJobs(jobs: ExportJob[]): void {
     this.params.onJobsChange?.(jobs.map((job) => ({ ...job })));
+  }
+
+  private getExportPackageName(): string {
+    return normalizeExportPackageName(this.params.options.exportPackageName);
   }
 
   private async waitIfPaused(): Promise<void> {

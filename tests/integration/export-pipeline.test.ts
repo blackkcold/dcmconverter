@@ -29,12 +29,13 @@ describe('export pipeline', () => {
       canvas: sourceCanvas,
       fileId: 'file_abcd',
       metadata: { studyDate: '20260612', modality: 'CT' },
-      options: DEFAULT_EXPORT_OPTIONS
+      options: DEFAULT_EXPORT_OPTIONS,
+      locale: 'en'
     });
-    const zip = await createZipFromJpegs([result]);
+    const zip = await createZipFromJpegs([result], 'en');
 
     expect(result.fileName).toBe(
-      '20260612_unknownPatient_CT_Sunknown_Iunknown_abcd.jpg'
+      '20260612_CT_Sunknown_Iunknown.jpg'
     );
     expect(zip.ok).toBe(true);
 
@@ -86,7 +87,8 @@ describe('export pipeline', () => {
           patientSex: 'M',
           patientAge: '045Y'
         }
-      }
+      },
+      locale: 'en'
     });
 
     expect(fillText).toHaveBeenCalledWith('Patient: Manual Name', 16, 16);

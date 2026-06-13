@@ -4,7 +4,10 @@ import type {
   FileSystemDirectoryHandleLike,
   WritableFileStreamLike
 } from '@/export/fileSystemAccess';
-import { writeBlobToDirectory } from '@/export/fileSystemAccess';
+import {
+  readTextFromDirectory,
+  writeBlobToDirectory
+} from '@/export/fileSystemAccess';
 
 class MockFileHandle {
   constructor(
@@ -13,7 +16,19 @@ class MockFileHandle {
   ) {}
 
   async getFile(): Promise<File> {
-    return new File([], this.path);
+    const contents = this.writes.get(this.path);
+    const text =
+      contents instanceof Blob
+        ? await contents.text()
+        : typeof contents === 'string'
+          ? contents
+          : contents
+            ? String(contents)
+            : '';
+
+    return {
+      text: async () => text
+    } as unknown as File;
   }
 
   async createWritable(): Promise<WritableFileStreamLike> {
@@ -66,5 +81,17 @@ describe('fileSystemAccess', () => {
     expect(root.directories.has('Study')).toBe(true);
     expect(root.directories.get('Study')?.directories.has('S001')).toBe(true);
     expect(writes.get('Study/S001/0001_scan.jpg')).toBe(blob);
+  });
+
+  it('can read nested text files by relative path', async () => {
+    const writes = new Map<string, Blob | BufferSource | string>();
+    const root = new MockDirectoryHandle('root', '', writes);
+
+    await root.getDirectoryHandle('Study');
+    writes.set('Study/report.json', '{"ok":true}');
+
+    await expect(readTextFromDirectory(root, 'Study/report.json')).resolves.toBe(
+      '{"ok":true}'
+    );
   });
 });

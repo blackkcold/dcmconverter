@@ -14,7 +14,7 @@ function createFile(name: string, content = 'DICM'): File {
 describe('fileIngest', () => {
   it('ingests selected DICOM files into LocalDicomFile records', () => {
     const file = createFile('scan.dcm');
-    const result = ingestFiles([file]);
+    const result = ingestFiles([file], 'en');
 
     expect(result.skippedFiles).toEqual([]);
     expect(result.files).toHaveLength(1);
@@ -34,14 +34,14 @@ describe('fileIngest', () => {
   });
 
   it('rejects empty selections without throwing', () => {
-    const result = ingestFiles([]);
+    const result = ingestFiles([], 'en');
 
     expect(result.files).toEqual([]);
     expect(result.skippedFiles[0]?.reason).toBe('No files selected');
   });
 
   it('skips obvious non-DICOM files', () => {
-    const result = ingestFiles([createFile('notes.txt')]);
+    const result = ingestFiles([createFile('notes.txt')], 'en');
 
     expect(result.files).toEqual([]);
     expect(result.skippedFiles[0]?.name).toBe('notes.txt');

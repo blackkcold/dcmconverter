@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  NON_DIAGNOSTIC_WATERMARK,
+  getNonDiagnosticWatermark,
   buildOverlayLineGroups
 } from '@/export/overlayRenderer';
 
@@ -9,7 +9,9 @@ describe('overlayRenderer', () => {
   it('renders anonymized patient fields by default', () => {
     const groups = buildOverlayLineGroups(
       { patientName: 'Jane Doe', patientId: '12345' },
-      { anonymizeOverlay: true }
+      { anonymizeOverlay: true },
+      undefined,
+      'en'
     );
     const allLines = groups.flatMap((group) => group.lines);
 
@@ -29,7 +31,9 @@ describe('overlayRenderer', () => {
         rows: 512,
         columns: 512
       },
-      { anonymizeOverlay: true }
+      { anonymizeOverlay: true },
+      undefined,
+      'en'
     );
     const text = groups.flatMap((group) => group.lines).join('\n');
 
@@ -37,6 +41,6 @@ describe('overlayRenderer', () => {
     expect(text).toContain('Series: 3');
     expect(text).toContain('Instance: 42');
     expect(text).toContain('WC/WW: 40 / 400');
-    expect(text).toContain(NON_DIAGNOSTIC_WATERMARK);
+    expect(text).toContain(getNonDiagnosticWatermark('en'));
   });
 });

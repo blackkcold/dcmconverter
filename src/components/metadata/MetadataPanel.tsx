@@ -1,40 +1,42 @@
 import { useActiveDicomMetadata } from '@/store/useDicomStore';
+import { useTranslator } from '@/i18n';
 
 const METADATA_ROWS = [
-  ['Patient', 'patientName'],
-  ['Patient ID', 'patientId'],
-  ['Modality', 'modality'],
-  ['Study Date', 'studyDate'],
-  ['Study', 'studyDescription'],
-  ['Protocol', 'protocolName'],
-  ['Series', 'seriesDescription'],
-  ['Series No.', 'seriesNumber'],
-  ['Instance No.', 'instanceNumber'],
-  ['Slice Thickness', 'sliceThickness'],
-  ['Pixel Spacing', 'pixelSpacing'],
-  ['Rescale Type', 'rescaleType'],
-  ['Manufacturer', 'manufacturer'],
-  ['Model', 'manufacturerModelName'],
-  ['Rows', 'rows'],
-  ['Columns', 'columns'],
-  ['Character Set', 'specificCharacterSet'],
-  ['Transfer Syntax', 'transferSyntaxUID']
+  ['metadata.patient', 'patientName'],
+  ['metadata.patientId', 'patientId'],
+  ['metadata.modality', 'modality'],
+  ['metadata.studyDate', 'studyDate'],
+  ['metadata.study', 'studyDescription'],
+  ['metadata.protocol', 'protocolName'],
+  ['metadata.series', 'seriesDescription'],
+  ['metadata.seriesNumber', 'seriesNumber'],
+  ['metadata.instanceNumber', 'instanceNumber'],
+  ['metadata.sliceThickness', 'sliceThickness'],
+  ['metadata.pixelSpacing', 'pixelSpacing'],
+  ['metadata.rescaleType', 'rescaleType'],
+  ['metadata.manufacturer', 'manufacturer'],
+  ['metadata.model', 'manufacturerModelName'],
+  ['metadata.rows', 'rows'],
+  ['metadata.columns', 'columns'],
+  ['metadata.characterSet', 'specificCharacterSet'],
+  ['metadata.transferSyntax', 'transferSyntaxUID']
 ] as const;
 
 export function MetadataPanel() {
   const metadata = useActiveDicomMetadata();
+  const t = useTranslator();
 
   return (
     <section className="tool-section">
-      <h2>Metadata</h2>
+      <h2>{t('metadata.heading')}</h2>
       {!metadata ? (
-        <p className="empty-state">暂无 metadata。导入标准 DICOM P10 后自动解析。</p>
+        <p className="empty-state">{t('metadata.emptyState')}</p>
       ) : (
         <dl className="metadata-list">
           {METADATA_ROWS.map(([label, key]) => (
             <div key={key}>
-              <dt>{label}</dt>
-              <dd>{String(metadata[key] ?? 'unknown')}</dd>
+              <dt>{t(label)}</dt>
+              <dd>{String(metadata[key] ?? t('metadata.unknown'))}</dd>
             </div>
           ))}
         </dl>

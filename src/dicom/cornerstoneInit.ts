@@ -1,7 +1,7 @@
-import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
+import { createLocalizedAppError, getCurrentLocale, type Locale } from '@/i18n';
 
 type InitializableModule = {
   init?: (options?: unknown) => void | Promise<void>;
@@ -9,12 +9,16 @@ type InitializableModule = {
 
 let initPromise: Promise<Result<void, AppError>> | undefined;
 
-export function initializeCornerstone(): Promise<Result<void, AppError>> {
-  initPromise ??= doInitializeCornerstone();
+export function initializeCornerstone(
+  locale: Locale = getCurrentLocale()
+): Promise<Result<void, AppError>> {
+  initPromise ??= doInitializeCornerstone(locale);
   return initPromise;
 }
 
-async function doInitializeCornerstone(): Promise<Result<void, AppError>> {
+async function doInitializeCornerstone(
+  locale: Locale
+): Promise<Result<void, AppError>> {
   try {
     const [core, tools, dicomImageLoader] = await Promise.all([
       import('@cornerstonejs/core') as Promise<unknown>,
@@ -32,9 +36,13 @@ async function doInitializeCornerstone(): Promise<Result<void, AppError>> {
   } catch (cause) {
     initPromise = undefined;
     return err(
-      createAppError('VIEWPORT_INIT_FAILED', 'Failed to initialize Cornerstone', {
-        cause
-      })
+      createLocalizedAppError(
+        locale,
+        'VIEWPORT_INIT_FAILED',
+        'error.cornerstoneInitializationFailed',
+        undefined,
+        { cause }
+      )
     );
   }
 }

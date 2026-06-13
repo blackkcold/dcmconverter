@@ -1,9 +1,9 @@
 import * as dicomParser from 'dicom-parser';
 
-import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
+import { createLocalizedAppError, getCurrentLocale, type Locale } from '@/i18n';
 
 import type { DicomMetadata } from './dicomTypes';
 import { DICOM_TAGS } from './metadataMap';
@@ -29,31 +29,41 @@ interface DicomTextDecoder {
 }
 
 export async function parseDicomMetadata(
-  file: File
+  file: File,
+  locale: Locale = getCurrentLocale()
 ): Promise<Result<DicomMetadata, AppError>> {
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    return parseDicomMetadataFromBytes(bytes);
+    return parseDicomMetadataFromBytes(bytes, locale);
   } catch (cause) {
     return err(
-      createAppError('FILE_READ_FAILED', `Failed to read ${file.name}`, {
-        cause
-      })
+      createLocalizedAppError(
+        locale,
+        'FILE_READ_FAILED',
+        'error.failedToReadFile',
+        { name: file.name },
+        { cause }
+      )
     );
   }
 }
 
 export function parseDicomMetadataFromBytes(
-  bytes: Uint8Array
+  bytes: Uint8Array,
+  locale: Locale = getCurrentLocale()
 ): Result<DicomMetadata, AppError> {
   try {
     const dataSet = dicomParser.parseDicom(bytes) as DicomDataSet;
     return ok(buildMetadata(dataSet));
   } catch (cause) {
     return err(
-      createAppError('DICOM_PARSE_FAILED', 'Failed to parse DICOM metadata', {
-        cause
-      })
+      createLocalizedAppError(
+        locale,
+        'DICOM_PARSE_FAILED',
+        'error.failedToParseDicomMetadata',
+        undefined,
+        { cause }
+      )
     );
   }
 }

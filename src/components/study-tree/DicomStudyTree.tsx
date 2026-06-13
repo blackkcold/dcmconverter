@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { DicomInstance, DicomSeries, DicomStudy } from '@/dicom/dicomTypes';
+import { useTranslator, type Translator } from '@/i18n';
 import { useDicomStore } from '@/store/useDicomStore';
 
 import {
@@ -14,6 +15,7 @@ import type { ImportTreeNode } from './treeSelection';
 export function DicomStudyTree() {
   const { files, studies, activeFileId, setActiveFileId, skippedFiles, removeFiles } =
     useDicomStore();
+  const t = useTranslator();
   const [rawSelectedFileIds, setRawSelectedFileIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -35,9 +37,7 @@ export function DicomStudyTree() {
   }
 
   function handleRemoveAll() {
-    if (
-      window.confirm('移除全部已导入文件？这只会清空当前浏览器会话，不会删除磁盘文件。')
-    ) {
+    if (window.confirm(t('tree.removeAllConfirm'))) {
       removeFiles(allFileIds);
       setRawSelectedFileIds(new Set());
     }
@@ -46,37 +46,37 @@ export function DicomStudyTree() {
   if (files.length === 0) {
     return (
       <section className="tool-section grow">
-        <h2>Study Tree</h2>
-        <p className="empty-state">选择 DICOM 文件后会在这里显示 Study/Series。</p>
+        <h2>{t('tree.heading')}</h2>
+        <p className="empty-state">{t('tree.emptyState')}</p>
       </section>
     );
   }
 
   return (
     <section className="tool-section grow">
-      <h2>Study Tree</h2>
+      <h2>{t('tree.heading')}</h2>
       <div className="tree-actions">
         <button
           type="button"
           onClick={() => setRawSelectedFileIds(new Set(allFileIds))}
         >
-          全部选中
+          {t('tree.selectAll')}
         </button>
         <button type="button" onClick={() => setRawSelectedFileIds(new Set())}>
-          取消选择
+          {t('tree.clearSelection')}
         </button>
         <button
           type="button"
           disabled={selectedFileIds.size === 0}
           onClick={handleRemoveSelected}
         >
-          移除选中 ({selectedFileIds.size})
+          {t('tree.removeSelected', { count: selectedFileIds.size })}
         </button>
         <button type="button" onClick={handleRemoveAll}>
-          全部移除
+          {t('tree.removeAll')}
         </button>
       </div>
-      <p className="muted tree-note">移除只清理当前导入列表，不会删除磁盘文件。</p>
+      <p className="muted tree-note">{t('tree.removeOnlyNotice')}</p>
       <div className="study-tree">
         {studies.map((study) => (
           <StudyItem
@@ -92,7 +92,7 @@ export function DicomStudyTree() {
         <details>
           <summary>
             <span className="tree-summary-row">
-              <span>Source Files</span>
+              <span>{t('tree.sourceFiles')}</span>
               <span className="count">{files.length}</span>
             </span>
           </summary>
@@ -112,7 +112,7 @@ export function DicomStudyTree() {
       </div>
       {skippedFiles.length > 0 ? (
         <details className="skipped-files">
-          <summary>Skipped files ({skippedFiles.length})</summary>
+          <summary>{t('tree.skippedFiles', { count: skippedFiles.length })}</summary>
           <ul>
             {skippedFiles.map((file) => (
               <li key={`${file.name}:${file.reason}`}>
@@ -133,13 +133,14 @@ function ImportTreeItem(props: {
   onSelectFile(fileId: string): void;
   onToggle(fileIds: readonly string[], checked: boolean): void;
 }) {
+  const t = useTranslator();
   const { node, activeFileId, selectedFileIds, onSelectFile, onToggle } = props;
 
   if (node.type === 'file' && node.fileId) {
     return (
       <li className="tree-file-row">
         <TreeCheckbox
-          label={`选择文件 ${node.name}`}
+          label={t('tree.selectFile', { name: node.name })}
           fileIds={node.fileIds}
           selectedFileIds={selectedFileIds}
           onToggle={onToggle}
@@ -161,7 +162,7 @@ function ImportTreeItem(props: {
         <summary>
           <span className="tree-summary-row">
             <TreeCheckbox
-              label={`选择目录 ${node.name}`}
+              label={t('tree.selectDirectory', { name: node.name })}
               fileIds={node.fileIds}
               selectedFileIds={selectedFileIds}
               onToggle={onToggle}
@@ -194,6 +195,7 @@ function StudyItem(props: {
   onSelectFile(fileId: string): void;
   onToggle(fileIds: readonly string[], checked: boolean): void;
 }) {
+  const t = useTranslator();
   const { study, activeFileId, selectedFileIds, onSelectFile, onToggle } = props;
   const studyFileIds = study.series.flatMap((series) =>
     series.instances.map((instance) => instance.fileId)
@@ -204,7 +206,9 @@ function StudyItem(props: {
       <summary>
         <span className="tree-summary-row">
           <TreeCheckbox
-            label={`选择 Study ${study.description ?? study.studyInstanceUID}`}
+            label={t('tree.selectStudy', {
+              name: study.description ?? study.studyInstanceUID
+            })}
             fileIds={studyFileIds}
             selectedFileIds={selectedFileIds}
             onToggle={onToggle}
@@ -234,6 +238,7 @@ function SeriesItem(props: {
   onSelectFile(fileId: string): void;
   onToggle(fileIds: readonly string[], checked: boolean): void;
 }) {
+  const t = useTranslator();
   const { series, activeFileId, selectedFileIds, onSelectFile, onToggle } = props;
   const seriesFileIds = series.instances.map((instance) => instance.fileId);
 
@@ -242,12 +247,14 @@ function SeriesItem(props: {
       <summary>
         <span className="tree-summary-row">
           <TreeCheckbox
-            label={`选择 Series ${series.seriesNumber ?? series.seriesInstanceUID}`}
+            label={t('tree.selectSeries', {
+              name: series.seriesNumber ?? series.seriesInstanceUID
+            })}
             fileIds={seriesFileIds}
             selectedFileIds={selectedFileIds}
             onToggle={onToggle}
           />
-          <span>{formatSeriesLabel(series)}</span>
+          <span>{formatSeriesLabel(series, t)}</span>
           <span className="count">{series.instances.length}</span>
         </span>
       </summary>
@@ -267,9 +274,9 @@ function SeriesItem(props: {
   );
 }
 
-function formatSeriesLabel(series: DicomSeries): string {
+function formatSeriesLabel(series: DicomSeries, t: Translator): string {
   return [
-    series.modality ?? 'Series',
+    series.modality ?? t('tree.seriesFallback'),
     series.seriesNumber !== undefined ? `S${series.seriesNumber}` : undefined,
     series.protocolName,
     series.description
@@ -285,12 +292,15 @@ function InstanceItem(props: {
   onSelectFile(fileId: string): void;
   onToggle(fileIds: readonly string[], checked: boolean): void;
 }) {
+  const t = useTranslator();
   const { instance, activeFileId, selectedFileIds, onSelectFile, onToggle } = props;
 
   return (
     <li className="tree-file-row">
       <TreeCheckbox
-        label={`选择 Instance ${instance.instanceNumber ?? instance.fileId}`}
+        label={t('tree.selectInstance', {
+          name: instance.instanceNumber ?? instance.fileId
+        })}
         fileIds={[instance.fileId]}
         selectedFileIds={selectedFileIds}
         onToggle={onToggle}
@@ -300,7 +310,7 @@ function InstanceItem(props: {
         className={activeFileId === instance.fileId ? 'tree-active' : ''}
         onClick={() => onSelectFile(instance.fileId)}
       >
-        Instance {instance.instanceNumber ?? instance.fileId}
+        {t('tree.instanceItem', { name: instance.instanceNumber ?? instance.fileId })}
       </button>
     </li>
   );

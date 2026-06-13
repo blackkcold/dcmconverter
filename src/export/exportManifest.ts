@@ -5,6 +5,7 @@ import {
   writeTextToDirectory
 } from './fileSystemAccess';
 import type { FileSystemDirectoryHandleLike } from './fileSystemAccess';
+import { createTranslator, getCurrentLocale, type Locale } from '@/i18n';
 
 export function createExportManifest(params: {
   datasetHash: string;
@@ -25,9 +26,10 @@ export function createExportManifest(params: {
 }
 
 export async function readExportManifest(
-  directoryHandle: FileSystemDirectoryHandleLike
+  directoryHandle: FileSystemDirectoryHandleLike,
+  relativePath = EXPORT_MANIFEST_FILE_NAME
 ): Promise<ExportManifest | undefined> {
-  const raw = await readTextFromDirectory(directoryHandle, EXPORT_MANIFEST_FILE_NAME);
+  const raw = await readTextFromDirectory(directoryHandle, relativePath);
   if (!raw) {
     return undefined;
   }
@@ -42,20 +44,25 @@ export async function readExportManifest(
 
 export async function writeExportManifest(
   directoryHandle: FileSystemDirectoryHandleLike,
-  manifest: ExportManifest
+  manifest: ExportManifest,
+  relativePath = EXPORT_MANIFEST_FILE_NAME,
+  locale: Locale = getCurrentLocale()
 ): Promise<void> {
   await writeTextToDirectory(
     directoryHandle,
-    EXPORT_MANIFEST_FILE_NAME,
-    JSON.stringify({ ...manifest, updatedAt: new Date().toISOString() }, null, 2)
+    relativePath,
+    JSON.stringify({ ...manifest, updatedAt: new Date().toISOString() }, null, 2),
+    locale
   );
 }
 
 export function applyResumeManifest(
   jobs: readonly ExportJob[],
   manifest: ExportManifest | undefined,
-  optionsHash: string
+  optionsHash: string,
+  locale: Locale = getCurrentLocale()
 ): ExportJob[] {
+  const t = createTranslator(locale);
   if (!manifest || manifest.optionsHash !== optionsHash) {
     return jobs.map((job) => ({ ...job }));
   }
@@ -84,7 +91,7 @@ export function applyResumeManifest(
       outputRelativePath: previous.outputRelativePath,
       ...(previous.startedAt ? { startedAt: previous.startedAt } : {}),
       ...(previous.finishedAt ? { finishedAt: previous.finishedAt } : {}),
-      errorMessage: 'Skipped by resume manifest'
+      errorMessage: t('error.resumeSkippedByManifest')
     };
   });
 }

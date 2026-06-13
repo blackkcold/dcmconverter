@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 
 import { ingestFiles } from '@/dicom/fileIngest';
 import { parseDicomMetadata } from '@/dicom/metadataParser';
+import { useLocaleStore, useTranslator } from '@/i18n';
 import { useDicomStore } from '@/store/useDicomStore';
 
 type DirectoryInputProps = InputHTMLAttributes<HTMLInputElement> & {
@@ -14,7 +15,9 @@ export function FileImportPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const directoryInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const locale = useLocaleStore((state) => state.locale);
   const { addFiles, setMetadata } = useDicomStore();
+  const t = useTranslator();
 
   async function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = event.target.files;
@@ -23,20 +26,22 @@ export function FileImportPanel() {
     }
 
     setBusy(true);
-    const result = ingestFiles(selectedFiles);
-    addFiles(result.files, result.skippedFiles);
+    try {
+      const result = ingestFiles(selectedFiles, locale);
+      addFiles(result.files, result.skippedFiles);
 
-    await Promise.all(
-      result.files.map(async (localFile) => {
-        const metadataResult = await parseDicomMetadata(localFile.file);
-        if (metadataResult.ok) {
-          setMetadata(localFile.id, metadataResult.value);
-        }
-      })
-    );
-
-    event.target.value = '';
-    setBusy(false);
+      await Promise.all(
+        result.files.map(async (localFile) => {
+          const metadataResult = await parseDicomMetadata(localFile.file, locale);
+          if (metadataResult.ok) {
+            setMetadata(localFile.id, metadataResult.value);
+          }
+        })
+      );
+    } finally {
+      event.target.value = '';
+      setBusy(false);
+    }
   }
 
   const directoryProps: DirectoryInputProps = {
@@ -49,19 +54,17 @@ export function FileImportPanel() {
 
   return (
     <section className="tool-section">
-      <h2>导入</h2>
+      <h2>{t('import.heading')}</h2>
       <div className="button-row">
         <button type="button" onClick={() => fileInputRef.current?.click()}>
-          选择 DICOM 文件
+          {t('import.selectFile')}
         </button>
         <button type="button" onClick={() => directoryInputRef.current?.click()}>
-          选择目录
+          {t('import.selectDirectory')}
         </button>
       </div>
-      <p className="muted">
-        浏览器仅能读取你主动选择的文件或目录；不会扫描磁盘路径。
-      </p>
-      {busy ? <p className="inline-status">正在解析 metadata...</p> : null}
+      <p className="muted">{t('import.browserOnly')}</p>
+      {busy ? <p className="inline-status">{t('import.parsingMetadata')}</p> : null}
       <input
         ref={fileInputRef}
         type="file"

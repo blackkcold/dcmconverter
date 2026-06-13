@@ -81,6 +81,13 @@ button:disabled {
   color: #64748b;
 }
 
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+}
+
 .header-stats {
   display: flex;
   flex-wrap: wrap;
@@ -165,6 +172,22 @@ button:disabled {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+}
+
+.locale-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.locale-switcher select {
+  min-width: 7rem;
+}
+
+.locale-switcher-label {
+  white-space: nowrap;
 }
 
 .muted,
@@ -369,6 +392,25 @@ button:disabled {
   gap: 0.5rem;
 }
 
+.template-section {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.7rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.template-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem 0.8rem;
+}
+
+.template-field-option {
+  margin: 0 !important;
+}
+
 .status-bar {
   padding: 0.55rem 1.25rem;
   border-top: 1px solid #e2e8f0;
@@ -378,6 +420,16 @@ button:disabled {
 }
 
 @media (max-width: 1100px) {
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    align-items: flex-start;
+  }
+
   .workspace-grid {
     grid-template-columns: 1fr;
     overflow: auto;

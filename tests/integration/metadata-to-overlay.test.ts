@@ -11,7 +11,9 @@ describe('metadata to overlay', () => {
         studyDate: '20260612',
         modality: 'MR'
       },
-      { anonymizeOverlay: true }
+      { anonymizeOverlay: true },
+      undefined,
+      'en'
     )
       .flatMap((group) => group.lines)
       .join('\n');

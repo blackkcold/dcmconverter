@@ -1,4 +1,5 @@
 import type { DicomMetadata } from '@/dicom/dicomTypes';
+import { createTranslator, getCurrentLocale, type Locale } from '@/i18n';
 import type { WindowLevel } from '@/viewer/viewerTypes';
 
 export interface JpegMetadataPayload {
@@ -10,6 +11,7 @@ export interface CreateJpegMetadataInput {
   metadata: DicomMetadata;
   windowLevel?: WindowLevel;
   burnedInAnnotation: boolean;
+  locale?: Locale;
 }
 
 const JPEG_SOI = 0xffd8;
@@ -26,11 +28,14 @@ export function createJpegMetadataPayload(
   input: CreateJpegMetadataInput
 ): JpegMetadataPayload {
   const { metadata, windowLevel, burnedInAnnotation } = input;
+  const locale = input.locale ?? getCurrentLocale();
+  const t = createTranslator(locale);
   const windowCenter = windowLevel?.center ?? metadata.windowCenter;
   const windowWidth = windowLevel?.width ?? metadata.windowWidth;
 
   return {
     imageDescription: buildImageDescription(
+      t,
       metadata,
       windowCenter,
       windowWidth,
@@ -177,19 +182,20 @@ function createTiffPayload(payload: JpegMetadataPayload): Uint8Array {
 }
 
 function buildImageDescription(
+  t: ReturnType<typeof createTranslator>,
   metadata: DicomMetadata,
   windowCenter: number | undefined,
   windowWidth: number | undefined,
   burnedInAnnotation: boolean
 ): string {
   const parts = [
-    'DICOM-JPEG v1',
+    t('overlay.imageDescriptionPrefix'),
     metadata.modality,
-    formatKeyValue('Series', metadata.seriesNumber),
-    formatKeyValue('Instance', metadata.instanceNumber),
-    formatWindowLevel(windowCenter, windowWidth),
-    formatKeyValue('Slice', formatWithUnit(metadata.sliceThickness, 'mm')),
-    formatKeyValue('PixelSpacing', formatPixelSpacing(metadata.pixelSpacing)),
+    formatKeyValue(t('overlay.series'), metadata.seriesNumber),
+    formatKeyValue(t('overlay.instance'), metadata.instanceNumber),
+    formatWindowLevel(t, windowCenter, windowWidth),
+    formatKeyValue(t('metadata.sliceThickness'), formatWithUnit(metadata.sliceThickness, 'mm')),
+    formatKeyValue(t('metadata.pixelSpacing'), formatPixelSpacing(metadata.pixelSpacing)),
     formatHuTransform(metadata),
     `BurnedIn=${burnedInAnnotation ? 'YES' : 'NO'}`
   ].filter((part): part is string => Boolean(part));
@@ -198,6 +204,7 @@ function buildImageDescription(
 }
 
 function formatWindowLevel(
+  t: ReturnType<typeof createTranslator>,
   windowCenter: number | undefined,
   windowWidth: number | undefined
 ): string | undefined {
@@ -205,7 +212,7 @@ function formatWindowLevel(
     return undefined;
   }
 
-  return `WC/WW=${formatNumber(windowCenter)}/${formatNumber(windowWidth)}`;
+  return `${t('overlay.windowLevel')}=${formatNumber(windowCenter)}/${formatNumber(windowWidth)}`;
 }
 
 function formatHuTransform(metadata: DicomMetadata): string | undefined {

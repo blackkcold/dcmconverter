@@ -10,6 +10,7 @@ describe('jpegMetadata', () => {
     const payload = createJpegMetadataPayload({
       burnedInAnnotation: true,
       windowLevel: { center: 40, width: 350 },
+      locale: 'en',
       metadata: {
         modality: 'CT',
         imageType: ['DERIVED', 'SECONDARY', 'AXIAL', 'HELICAL'],
@@ -40,7 +41,8 @@ describe('jpegMetadata', () => {
 
     expect(payload.imageDescription).toContain('DICOM-JPEG v1 | CT');
     expect(payload.imageDescription).toContain('WC/WW=40/350');
-    expect(payload.imageDescription).toContain('PixelSpacing=0.70015x0.70015');
+    expect(payload.imageDescription).toContain('Pixel Spacing=0.70015x0.70015');
+    expect(payload.imageDescription).toContain('Slice Thickness=5mm');
     expect(comment.schema).toBe('dicom-jpeg-meta/v1');
     expect(comment.source.protocolName).toBe('腹部平扫+薄层');
     expect(comment.rendering.burnedInAnnotation).toBe(true);

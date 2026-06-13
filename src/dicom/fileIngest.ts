@@ -1,4 +1,5 @@
 import type { FileIngestResult, LocalDicomFile, SkippedFile } from './dicomTypes';
+import { createTranslator, getCurrentLocale, type Locale } from '@/i18n';
 
 const ACCEPTED_EXTENSIONS = new Set(['.dcm', '.dicom', '.ima']);
 const KNOWN_NON_DICOM_EXTENSIONS = new Set([
@@ -15,13 +16,17 @@ const KNOWN_NON_DICOM_EXTENSIONS = new Set([
   '.zip'
 ]);
 
-export function ingestFiles(input: FileList | readonly File[]): FileIngestResult {
+export function ingestFiles(
+  input: FileList | readonly File[],
+  locale: Locale = getCurrentLocale()
+): FileIngestResult {
+  const t = createTranslator(locale);
   const files = Array.from(input);
 
   if (files.length === 0) {
     return {
       files: [],
-      skippedFiles: [{ name: '(empty selection)', reason: 'No files selected' }]
+      skippedFiles: [{ name: t('ingest.emptySelection'), reason: t('ingest.noFilesSelected') }]
     };
   }
 
@@ -32,7 +37,7 @@ export function ingestFiles(input: FileList | readonly File[]): FileIngestResult
     if (!isPotentialDicomFile(file)) {
       skippedFiles.push({
         name: file.name,
-        reason: 'Unsupported extension for V1 local DICOM ingest'
+        reason: t('ingest.unsupportedExtension')
       });
       return;
     }

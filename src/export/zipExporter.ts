@@ -1,10 +1,14 @@
 import { zipSync } from 'fflate';
 import type { Zippable } from 'fflate';
 
-import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
+import {
+  createLocalizedAppError,
+  getCurrentLocale,
+  type Locale
+} from '@/i18n';
 
 import type { JpegExportResult } from './exportTypes';
 
@@ -14,15 +18,18 @@ export interface ZipFileEntry {
 }
 
 export async function createZipFromJpegs(
-  results: readonly JpegExportResult[]
+  results: readonly JpegExportResult[],
+  locale: Locale = getCurrentLocale()
 ): Promise<Result<Blob, AppError>> {
   return createZipFromFiles(
-    results.map((result) => ({ fileName: result.fileName, blob: result.blob }))
+    results.map((result) => ({ fileName: result.fileName, blob: result.blob })),
+    locale
   );
 }
 
 export async function createZipFromFiles(
-  files: readonly ZipFileEntry[]
+  files: readonly ZipFileEntry[],
+  locale: Locale = getCurrentLocale()
 ): Promise<Result<Blob, AppError>> {
   try {
     const entries: Zippable = {};
@@ -38,7 +45,13 @@ export async function createZipFromFiles(
     return ok(new Blob([zipped], { type: 'application/zip' }));
   } catch (cause) {
     return err(
-      createAppError('ZIP_EXPORT_FAILED', 'Failed to create ZIP archive', { cause })
+      createLocalizedAppError(
+        locale,
+        'ZIP_EXPORT_FAILED',
+        'error.failedToCreateZipArchive',
+        undefined,
+        { cause }
+      )
     );
   }
 }

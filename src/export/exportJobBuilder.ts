@@ -1,8 +1,13 @@
 import type { DicomMetadata, DicomStudy, LocalDicomFile } from '@/dicom/dicomTypes';
 
 import { applyPatientOverride } from './effectiveMetadata';
+import {
+  createJpegFileName,
+  joinRelativePath,
+  normalizeExportPackageName,
+  resolveFileNameTemplateFields
+} from './exportNaming';
 import type { ExportJob, ExportOptions, MetadataFolderField } from './exportTypes';
-import { createJpegFileName } from './fileNamer';
 import { hashJson } from './hash';
 
 export interface BuildExportJobsInput {
@@ -24,8 +29,16 @@ export function buildExportJobs(input: BuildExportJobsInput): {
   );
   const usedNamesByDirectory = new Map<string, Set<string>>();
   const sequenceByDirectory = new Map<string, number>();
+  const exportPackageName = normalizeExportPackageName(
+    input.options.exportPackageName
+  );
   const optionsHash = hashExportOptions(input.options);
   const datasetHash = hashDataset(sortedFiles);
+  const fileNameTemplate = {
+    fileNameTemplateMode: input.options.fileNameTemplateMode,
+    fileNameTemplatePreset: input.options.fileNameTemplatePreset,
+    fileNameTemplateFields: resolveFileNameTemplateFields(input.options)
+  };
 
   return {
     datasetHash,
@@ -42,17 +55,18 @@ export function buildExportJobs(input: BuildExportJobsInput): {
         input.options.outputLayout,
         input.options.metadataFolderField
       );
-      const directoryKey = outputDirectory ?? '';
+      const directoryKey = joinRelativePath(exportPackageName, outputDirectory);
       const sequenceNumber = (sequenceByDirectory.get(directoryKey) ?? 0) + 1;
       sequenceByDirectory.set(directoryKey, sequenceNumber);
 
       const usedNames = getUsedNamesForDirectory(usedNamesByDirectory, directoryKey);
       const outputFileName = createJpegFileName(
         metadata,
-        file.id,
-        usedNames,
-        input.options.includePersonalInfo,
-        sequenceNumber
+        {
+          ...fileNameTemplate,
+          usedNames,
+          sequenceNumber
+        }
       );
 
       return {
@@ -61,7 +75,11 @@ export function buildExportJobs(input: BuildExportJobsInput): {
         status: 'pending',
         batchIndex: Math.floor(index / input.options.batchSize),
         outputFileName,
-        outputRelativePath: joinRelativePath(outputDirectory, outputFileName),
+        outputRelativePath: joinRelativePath(
+          exportPackageName,
+          outputDirectory,
+          outputFileName
+        ),
         sourceRelativePath: file.relativePath,
         retryCount: 0,
         metadataHash,
@@ -85,7 +103,10 @@ export function splitIntoBatches<T>(items: readonly T[], batchSize: number): T[]
 }
 
 export function hashExportOptions(options: ExportOptions): string {
+  const fileNameTemplateFields = resolveFileNameTemplateFields(options);
+
   return hashJson({
+    exportPackageName: normalizeExportPackageName(options.exportPackageName),
     jpegQuality: options.jpegQuality,
     includeOverlay: options.includeOverlay,
     anonymizeOverlay: options.anonymizeOverlay,
@@ -96,7 +117,10 @@ export function hashExportOptions(options: ExportOptions): string {
     overlayPosition: options.overlayPosition,
     useCurrentWindowLevel: options.useCurrentWindowLevel,
     outputLayout: options.outputLayout,
-    metadataFolderField: options.metadataFolderField
+    metadataFolderField: options.metadataFolderField,
+    fileNameTemplateMode: options.fileNameTemplateMode,
+    fileNameTemplatePreset: options.fileNameTemplatePreset,
+    fileNameTemplateFields
   });
 }
 
@@ -309,13 +333,6 @@ function getSeriesSelectionKey(metadata: DicomMetadata): string | undefined {
   ].filter((part) => part !== undefined && part !== '');
 
   return parts.length > 0 ? parts.join(':') : undefined;
-}
-
-function joinRelativePath(
-  directory: string | undefined,
-  fileName: string | undefined
-): string {
-  return [directory, fileName].filter(Boolean).join('/');
 }
 
 function getUsedNamesForDirectory(

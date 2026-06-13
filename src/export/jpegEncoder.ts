@@ -1,7 +1,11 @@
-import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
+import {
+  createLocalizedAppError,
+  getCurrentLocale,
+  type Locale
+} from '@/i18n';
 
 import { injectJpegExifMetadata } from './jpegMetadata';
 import type { JpegMetadataPayload } from './jpegMetadata';
@@ -9,7 +13,8 @@ import type { JpegMetadataPayload } from './jpegMetadata';
 export function encodeCanvasToJpeg(
   canvas: HTMLCanvasElement,
   quality: number,
-  metadata?: JpegMetadataPayload
+  metadata?: JpegMetadataPayload,
+  locale: Locale = getCurrentLocale()
 ): Promise<Result<Blob, AppError>> {
   const normalizedQuality = Math.min(Math.max(quality, 0.1), 1);
 
@@ -19,9 +24,10 @@ export function encodeCanvasToJpeg(
         if (!blob) {
           resolve(
             err(
-              createAppError(
+              createLocalizedAppError(
+                locale,
                 'JPEG_EXPORT_FAILED',
-                'Browser failed to encode canvas as JPEG'
+                'error.browserFailedToEncodeCanvasJpeg'
               )
             )
           );
@@ -38,9 +44,11 @@ export function encodeCanvasToJpeg(
           .catch((cause) =>
             resolve(
               err(
-                createAppError(
+                createLocalizedAppError(
+                  locale,
                   'JPEG_EXPORT_FAILED',
-                  'Browser encoded JPEG, but metadata injection failed',
+                  'error.browserEncodedJpegMetadataInjectionFailed',
+                  undefined,
                   { cause }
                 )
               )

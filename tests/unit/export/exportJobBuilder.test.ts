@@ -37,7 +37,7 @@ describe('exportJobBuilder', () => {
     expect(splitIntoBatches([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
   });
 
-  it('includes patient id in names only when personal info is enabled', () => {
+  it('keeps patient identifiers out of file names regardless of personal-info mode', () => {
     const file = localFile('file_a', 'a.dcm');
     const withPersonalInfo = buildExportJobs({
       files: [file],
@@ -66,8 +66,42 @@ describe('exportJobBuilder', () => {
       }
     });
 
-    expect(withPersonalInfo.jobs[0]?.outputFileName).toContain('PID-1');
-    expect(anonymous.jobs[0]?.outputFileName).not.toContain('PID-1');
+    expect(withPersonalInfo.jobs[0]?.outputFileName).toBe(
+      '0001_20260612_CT_Sunknown_Iunknown.jpg'
+    );
+    expect(anonymous.jobs[0]?.outputFileName).toBe(
+      '0001_20260612_CT_Sunknown_Iunknown.jpg'
+    );
+  });
+
+  it('changes options hashes when naming configuration changes', () => {
+    const file = localFile('file_a', 'a.dcm');
+    const base = buildExportJobs({
+      files: [file],
+      studies: [],
+      activeFileId: file.id,
+      options: { ...DEFAULT_EXPORT_OPTIONS, scope: 'all' },
+      metadataByFileId: {
+        [file.id]: { studyDate: '20260612', modality: 'CT' }
+      }
+    });
+    const renamed = buildExportJobs({
+      files: [file],
+      studies: [],
+      activeFileId: file.id,
+      options: {
+        ...DEFAULT_EXPORT_OPTIONS,
+        scope: 'all',
+        exportPackageName: 'custom-pack',
+        fileNameTemplateMode: 'fields',
+        fileNameTemplateFields: ['studyDate', 'modality']
+      },
+      metadataByFileId: {
+        [file.id]: { studyDate: '20260612', modality: 'CT' }
+      }
+    });
+
+    expect(base.optionsHash).not.toBe(renamed.optionsHash);
   });
 
   it('creates legacy series folders and directory-local sequence prefixes when requested', () => {
@@ -104,8 +138,8 @@ describe('exportJobBuilder', () => {
     });
 
     expect(result.jobs.map((job) => job.outputRelativePath)).toEqual([
-      'Study_20260612_1.2.3.4/S003_CT_9.8.7.6/0001_20260612_CT_S003_I0001_a.jpg',
-      'Study_20260612_1.2.3.4/S003_CT_9.8.7.6/0002_20260612_CT_S003_I0002_b.jpg'
+      'dicom-jpeg-export/Study_20260612_1.2.3.4/S003_CT_9.8.7.6/0001_20260612_CT_S003_I0001.jpg',
+      'dicom-jpeg-export/Study_20260612_1.2.3.4/S003_CT_9.8.7.6/0002_20260612_CT_S003_I0002.jpg'
     ]);
   });
 
@@ -135,7 +169,7 @@ describe('exportJobBuilder', () => {
     });
 
     expect(result.jobs[0]?.outputRelativePath).toBe(
-      'Study_20260612_1.2.3.4/Protocol_腹部平扫+薄层/S003_腹窗_cor&sag_5mm_9.8.7.6/0001_20260612_CT_S003_I0001_a.jpg'
+      'dicom-jpeg-export/Study_20260612_1.2.3.4/Protocol_腹部平扫+薄层/S003_腹窗_cor&sag_5mm_9.8.7.6/0001_20260612_CT_S003_I0001.jpg'
     );
   });
 
@@ -168,7 +202,7 @@ describe('exportJobBuilder', () => {
         options: { ...base.options, metadataFolderField: 'seriesDescription' }
       }).jobs[0]?.outputRelativePath
     ).toBe(
-      'Study_20260612_unknown/SeriesDescription_腹窗_cor&sag_5mm/0001_20260612_unknown_Sunknown_I0054_a.jpg'
+      'dicom-jpeg-export/Study_20260612_unknown/SeriesDescription_腹窗_cor&sag_5mm/0001_20260612_unknown_Sunknown_I0054.jpg'
     );
     expect(
       buildExportJobs({
@@ -176,7 +210,7 @@ describe('exportJobBuilder', () => {
         options: { ...base.options, metadataFolderField: 'protocolName' }
       }).jobs[0]?.outputRelativePath
     ).toBe(
-      'Study_20260612_unknown/Protocol_腹部平扫+薄层/0001_20260612_unknown_Sunknown_I0054_a.jpg'
+      'dicom-jpeg-export/Study_20260612_unknown/Protocol_腹部平扫+薄层/0001_20260612_unknown_Sunknown_I0054.jpg'
     );
     expect(
       buildExportJobs({
@@ -184,7 +218,7 @@ describe('exportJobBuilder', () => {
         options: { ...base.options, metadataFolderField: 'instanceNumber' }
       }).jobs[0]?.outputRelativePath
     ).toBe(
-      'Study_20260612_unknown/Instance_0054/0001_20260612_unknown_Sunknown_I0054_a.jpg'
+      'dicom-jpeg-export/Study_20260612_unknown/Instance_0054/0001_20260612_unknown_Sunknown_I0054.jpg'
     );
   });
 
@@ -219,10 +253,10 @@ describe('exportJobBuilder', () => {
     });
 
     expect(source.jobs[0]?.outputRelativePath).toBe(
-      'import/sub/0001_20260612_CT_Sunknown_I0001_a.jpg'
+      'dicom-jpeg-export/import/sub/0001_20260612_CT_Sunknown_I0001.jpg'
     );
     expect(flat.jobs[0]?.outputRelativePath).toBe(
-      '0001_20260612_CT_Sunknown_I0001_a.jpg'
+      'dicom-jpeg-export/0001_20260612_CT_Sunknown_I0001.jpg'
     );
   });
 });

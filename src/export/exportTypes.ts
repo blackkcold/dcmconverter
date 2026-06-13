@@ -1,6 +1,7 @@
 export interface ExportOptions {
   scope: 'current' | 'series' | 'all';
   exportMode: 'folder' | 'zip';
+  exportPackageName: string;
   outputLayout:
     | 'dicomSmart'
     | 'metadataField'
@@ -9,6 +10,9 @@ export interface ExportOptions {
     | 'source'
     | 'seriesSource';
   metadataFolderField: MetadataFolderField;
+  fileNameTemplateMode: FileNameTemplateMode;
+  fileNameTemplatePreset: FileNameTemplatePreset;
+  fileNameTemplateFields: ExportNamingFieldKey[];
   jpegQuality: number;
   includeOverlay: boolean;
   anonymizeOverlay: boolean;
@@ -25,6 +29,19 @@ export interface ExportOptions {
 export type MetadataFolderField =
   | 'seriesDescription'
   | 'protocolName'
+  | 'instanceNumber';
+
+export type FileNameTemplateMode = 'preset' | 'fields';
+
+export type FileNameTemplatePreset = 'standard' | 'study' | 'series';
+
+export type ExportNamingFieldKey =
+  | 'studyDate'
+  | 'studyDescription'
+  | 'modality'
+  | 'protocolName'
+  | 'seriesNumber'
+  | 'seriesDescription'
   | 'instanceNumber';
 
 export interface PatientMetadataOverride {
@@ -59,8 +76,17 @@ export interface JpegExportResult {
 export const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   scope: 'current',
   exportMode: 'folder',
+  exportPackageName: 'dicom-jpeg-export',
   outputLayout: 'dicomSmart',
   metadataFolderField: 'seriesDescription',
+  fileNameTemplateMode: 'preset',
+  fileNameTemplatePreset: 'standard',
+  fileNameTemplateFields: [
+    'studyDate',
+    'modality',
+    'seriesNumber',
+    'instanceNumber'
+  ],
   jpegQuality: 0.92,
   includeOverlay: true,
   anonymizeOverlay: true,

@@ -126,6 +126,7 @@ describe('SerialBatchExportRunner', () => {
       'success'
     ]);
     expect(result.zipBlob?.type).toBe('application/zip');
+    expect(result.zipFileName).toBe('dicom-jpeg-export.zip');
   });
 
   it('can retry only failed jobs', async () => {
@@ -208,12 +209,17 @@ describe('SerialBatchExportRunner', () => {
     const result = await runner.run();
 
     expect(result.jobs[0]?.outputRelativePath).toBe(
-      'Study_20260612_study-a/Protocol_unknown/S001_unknown_series-a/0001_20260612_CT_S001_I0001_a.jpg'
+      'dicom-jpeg-export/Study_20260612_study-a/Protocol_unknown/S001_unknown_series-a/0001_20260612_CT_S001_I0001.jpg'
     );
     expect(
       writes.has(
-        'Study_20260612_study-a/Protocol_unknown/S001_unknown_series-a/0001_20260612_CT_S001_I0001_a.jpg'
+        'dicom-jpeg-export/Study_20260612_study-a/Protocol_unknown/S001_unknown_series-a/0001_20260612_CT_S001_I0001.jpg'
       )
     ).toBe(true);
+    expect(
+      writes.has('dicom-jpeg-export/.dcm-jpeg-export-manifest.json')
+    ).toBe(true);
+    expect(writes.has('dicom-jpeg-export/export-report.json')).toBe(true);
+    expect(writes.has('dicom-jpeg-export/export-report.csv')).toBe(true);
   });
 });

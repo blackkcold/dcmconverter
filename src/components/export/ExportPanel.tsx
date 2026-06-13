@@ -2,16 +2,66 @@ import { useRef, useState } from 'react';
 
 import { SerialBatchExportRunner } from '@/export/batchExportRunner';
 import {
+  createExportArchiveFileName,
+  EXPORT_NAMING_FIELDS
+} from '@/export/exportNaming';
+import {
   isDirectoryWriteSupported,
   requestExportDirectory
 } from '@/export/fileSystemAccess';
 import type { FileSystemDirectoryHandleLike } from '@/export/fileSystemAccess';
+import {
+  createLocalizedText,
+  formatLocalizedText,
+  useLocaleStore,
+  useTranslator,
+  type LocalizedText
+} from '@/i18n';
 import { useDicomStore } from '@/store/useDicomStore';
 import { useExportStore } from '@/store/useExportStore';
 import { useViewerStore } from '@/store/useViewerStore';
 
+const SCOPES = [
+  { value: 'current', key: 'export.scopeCurrent' },
+  { value: 'series', key: 'export.scopeSeries' },
+  { value: 'all', key: 'export.scopeAll' }
+] as const;
+
+const EXPORT_MODES = [
+  { value: 'folder', key: 'export.outputModeFolder' },
+  { value: 'zip', key: 'export.outputModeZip' }
+] as const;
+
+const FILE_NAME_TEMPLATE_MODES = [
+  { value: 'preset', key: 'export.fileNameTemplateModePreset' },
+  { value: 'fields', key: 'export.fileNameTemplateModeFields' }
+] as const;
+
+const FILE_NAME_TEMPLATE_PRESETS = [
+  { value: 'standard', key: 'export.fileNamePresetStandard' },
+  { value: 'study', key: 'export.fileNamePresetStudy' },
+  { value: 'series', key: 'export.fileNamePresetSeries' }
+] as const;
+
+const OUTPUT_LAYOUTS = [
+  { value: 'dicomSmart', key: 'export.layoutDicomSmart' },
+  { value: 'metadataField', key: 'export.layoutMetadataField' },
+  { value: 'series', key: 'export.layoutSeries' },
+  { value: 'seriesSource', key: 'export.layoutSeriesSource' },
+  { value: 'source', key: 'export.layoutSource' },
+  { value: 'flat', key: 'export.layoutFlat' }
+] as const;
+
+const METADATA_FIELDS = [
+  { value: 'seriesDescription', key: 'export.metadataFieldSeriesDescription' },
+  { value: 'protocolName', key: 'export.metadataFieldProtocolName' },
+  { value: 'instanceNumber', key: 'export.metadataFieldInstanceNumber' }
+] as const;
+
 export function ExportPanel() {
   const { files, studies, metadataByFileId, activeFileId } = useDicomStore();
+  const locale = useLocaleStore((state) => state.locale);
+  const t = useTranslator();
   const {
     jobs,
     options,
@@ -29,10 +79,10 @@ export function ExportPanel() {
     undefined
   );
   const runnerRef = useRef<SerialBatchExportRunner | undefined>(undefined);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<string | LocalizedText>('');
 
   async function handleChooseDirectory() {
-    const result = await requestExportDirectory();
+    const result = await requestExportDirectory(locale);
     if (!result.ok) {
       setMessage(result.error.message);
       return;
@@ -41,12 +91,12 @@ export function ExportPanel() {
     directoryHandleRef.current = result.value;
     setTargetDirectoryName(result.value.name);
     setOptions({ exportMode: 'folder' });
-    setMessage(`目标文件夹：${result.value.name}`);
+    setMessage(createLocalizedText('export.targetDirectorySelected', { name: result.value.name }));
   }
 
   async function handleExport(mode: 'all' | 'failed' = 'all') {
     if (files.length === 0) {
-      setMessage('请先导入 DICOM 文件。');
+      setMessage(createLocalizedText('export.noFiles'));
       return;
     }
 
@@ -55,7 +105,7 @@ export function ExportPanel() {
       !directoryHandleRef.current &&
       isDirectoryWriteSupported()
     ) {
-      setMessage('请先选择导出目标文件夹。');
+      setMessage(createLocalizedText('export.selectDirectoryFirst'));
       return;
     }
 
@@ -66,7 +116,7 @@ export function ExportPanel() {
 
     setRunning(true);
     setPaused(false);
-    setMessage('开始串行批量导出...');
+    setMessage(createLocalizedText('export.starting'));
 
     try {
       const windowLevel =
@@ -84,6 +134,7 @@ export function ExportPanel() {
         ...(directoryHandleRef.current
           ? { directoryHandle: directoryHandleRef.current }
           : {}),
+        locale,
         ...(windowLevel ? { currentWindowLevel: windowLevel } : {}),
         onJobsChange: setJobs,
         onMessage: setMessage
@@ -92,17 +143,28 @@ export function ExportPanel() {
       const result = await runner.run();
 
       if (result.zipBlob) {
-        triggerDownload(result.zipBlob, 'dicom-jpeg-export.zip');
+        triggerDownload(
+          result.zipBlob,
+          result.zipFileName ?? createExportArchiveFileName(options.exportPackageName)
+        );
       }
 
       const successCount = result.jobs.filter((job) => job.status === 'success').length;
       const failedCount = result.jobs.filter((job) => job.status === 'failed').length;
       const skippedCount = result.jobs.filter((job) => job.status === 'skipped').length;
       setMessage(
-        `导出完成：成功 ${successCount}，失败 ${failedCount}，跳过 ${skippedCount}。`
+        createLocalizedText('export.completed', {
+          success: successCount,
+          failed: failedCount,
+          skipped: skippedCount
+        })
       );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '批量导出失败。');
+      if (typeof error === 'object' && error !== null && 'message' in error) {
+        setMessage(String((error as { message?: unknown }).message ?? t('export.failed')));
+      } else {
+        setMessage(t('export.failed'));
+      }
     } finally {
       setRunning(false);
       setPaused(false);
@@ -124,37 +186,62 @@ export function ExportPanel() {
     runnerRef.current?.cancel();
   }
 
+  function toggleFileNameField(
+    field: (typeof EXPORT_NAMING_FIELDS)[number]['key'],
+    checked: boolean
+  ): void {
+    const selected = new Set(options.fileNameTemplateFields);
+
+    if (checked) {
+      selected.add(field);
+    } else {
+      selected.delete(field);
+    }
+
+    const next = EXPORT_NAMING_FIELDS.map((item) => item.key).filter((item) =>
+      selected.has(item)
+    );
+    if (next.length === 0) {
+      return;
+    }
+
+    setOptions({ fileNameTemplateFields: next });
+  }
+
   const directorySupported = isDirectoryWriteSupported();
   const failedCount = jobs.filter((job) => job.status === 'failed').length;
 
   return (
     <section className="tool-section">
-      <h2>Export</h2>
+      <h2>{t('export.heading')}</h2>
       <label>
-        范围
+        {t('export.scope')}
         <select
           value={options.scope}
           onChange={(event) =>
             setOptions({ scope: event.target.value as typeof options.scope })
           }
         >
-          <option value="current">当前图像</option>
-          <option value="series">当前序列</option>
-          <option value="all">全部导入文件</option>
+          {SCOPES.map((item) => (
+            <option key={item.value} value={item.value}>
+              {t(item.key)}
+            </option>
+          ))}
         </select>
       </label>
       <label>
-        输出方式
+        {t('export.outputMode')}
         <select
           value={options.exportMode}
           onChange={(event) =>
             setOptions({ exportMode: event.target.value as typeof options.exportMode })
           }
         >
-          <option value="folder" disabled={!directorySupported}>
-            目标文件夹（断点继续）
-          </option>
-          <option value="zip">ZIP 下载</option>
+          {EXPORT_MODES.map((item) => (
+            <option key={item.value} value={item.value} disabled={item.value === 'folder' && !directorySupported}>
+              {t(item.key)}
+            </option>
+          ))}
         </select>
       </label>
       {options.exportMode === 'folder' ? (
@@ -164,13 +251,83 @@ export function ExportPanel() {
             disabled={!directorySupported}
             onClick={handleChooseDirectory}
           >
-            选择导出文件夹
+            {t('export.chooseDirectory')}
           </button>
-          <span className="muted">{targetDirectoryName ?? '尚未选择目标文件夹'}</span>
+          <span className="muted">
+            {targetDirectoryName
+              ? t('export.targetDirectorySelected', { name: targetDirectoryName })
+              : t('export.targetDirectoryUnset')}
+          </span>
         </div>
       ) : null}
       <label>
-        目录结构
+        {t('export.packageName')}
+        <input
+          type="text"
+          value={options.exportPackageName}
+          placeholder="dicom-jpeg-export"
+          onChange={(event) =>
+            setOptions({ exportPackageName: event.target.value })
+          }
+        />
+      </label>
+      <p className="muted">{t('export.packageNameHint')}</p>
+      <div className="template-section">
+        <label>
+          {t('export.fileNameTemplateMode')}
+          <select
+            value={options.fileNameTemplateMode}
+            onChange={(event) =>
+              setOptions({
+                fileNameTemplateMode: event.target.value as typeof options.fileNameTemplateMode
+              })
+            }
+          >
+            {FILE_NAME_TEMPLATE_MODES.map((item) => (
+              <option key={item.value} value={item.value}>
+                {t(item.key)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {options.fileNameTemplateMode === 'preset' ? (
+          <label>
+            {t('export.fileNamePreset')}
+            <select
+              value={options.fileNameTemplatePreset}
+              onChange={(event) =>
+                setOptions({
+                  fileNameTemplatePreset: event.target.value as typeof options.fileNameTemplatePreset
+                })
+              }
+            >
+              {FILE_NAME_TEMPLATE_PRESETS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {t(item.key)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <div className="template-field-grid" role="group" aria-label={t('export.fileNameFields')}>
+            {EXPORT_NAMING_FIELDS.map((field) => (
+              <label key={field.key} className="checkbox-row template-field-option">
+                <input
+                  type="checkbox"
+                  checked={options.fileNameTemplateFields.includes(field.key)}
+                  onChange={(event) =>
+                    toggleFileNameField(field.key, event.target.checked)
+                  }
+                />
+                {t(field.labelKey)}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+      <p className="muted">{t('export.fileNameTemplateHint')}</p>
+      <label>
+        {t('export.layout')}
         <select
           value={options.outputLayout}
           onChange={(event) =>
@@ -179,17 +336,16 @@ export function ExportPanel() {
             })
           }
         >
-          <option value="dicomSmart">按 DICOM Meta 智能归类</option>
-          <option value="metadataField">按指定 Meta 字段归类</option>
-          <option value="series">按 Study / Series 分文件夹</option>
-          <option value="seriesSource">按 Series + 来源子目录</option>
-          <option value="source">保留来源子目录</option>
-          <option value="flat">平铺到同一目录</option>
+          {OUTPUT_LAYOUTS.map((item) => (
+            <option key={item.value} value={item.value}>
+              {t(item.key)}
+            </option>
+          ))}
         </select>
       </label>
       {options.outputLayout === 'metadataField' ? (
         <label>
-          归类字段
+          {t('export.metadataField')}
           <select
             value={options.metadataFolderField}
             onChange={(event) =>
@@ -199,14 +355,16 @@ export function ExportPanel() {
               })
             }
           >
-            <option value="seriesDescription">Series Description</option>
-            <option value="protocolName">Protocol Name</option>
-            <option value="instanceNumber">Instance</option>
+            {METADATA_FIELDS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {t(item.key)}
+              </option>
+            ))}
           </select>
         </label>
       ) : null}
       <label>
-        JPEG 质量 {Math.round(options.jpegQuality * 100)}%
+        {t('export.jpegQuality', { quality: Math.round(options.jpegQuality * 100) })}
         <input
           type="range"
           min="0.85"
@@ -218,10 +376,10 @@ export function ExportPanel() {
       </label>
       <div className="button-row">
         <button type="button" onClick={() => setOptions({ jpegQuality: 0.92 })}>
-          标准 92%
+          {t('export.qualityStandard')}
         </button>
         <button type="button" onClick={() => setOptions({ jpegQuality: 1 })}>
-          超高清 100%
+          {t('export.qualityUltra')}
         </button>
       </div>
       <label className="checkbox-row">
@@ -230,7 +388,7 @@ export function ExportPanel() {
           checked={options.includeOverlay}
           onChange={(event) => setOptions({ includeOverlay: event.target.checked })}
         />
-        烧录关键信息
+        {t('export.burnInKeyInfo')}
       </label>
       <label className="checkbox-row">
         <input
@@ -243,7 +401,7 @@ export function ExportPanel() {
             })
           }
         />
-        包含个人信息
+        {t('export.includePersonalInfo')}
       </label>
       <label className="checkbox-row">
         <input
@@ -252,7 +410,7 @@ export function ExportPanel() {
           disabled={options.includePersonalInfo}
           onChange={(event) => setOptions({ anonymizeOverlay: event.target.checked })}
         />
-        匿名 overlay
+        {t('export.anonymizeOverlay')}
       </label>
       <label className="checkbox-row">
         <input
@@ -262,12 +420,12 @@ export function ExportPanel() {
             setOptions({ patientOverrideEnabled: event.target.checked })
           }
         />
-        导出时覆盖患者姓名 / 性别 / 年龄
+        {t('export.overridePatient')}
       </label>
       {options.patientOverrideEnabled ? (
         <div className="patient-override-grid">
           <label>
-            患者姓名
+            {t('export.patientName')}
             <input
               type="text"
               value={options.patientOverride.patientName ?? ''}
@@ -282,7 +440,7 @@ export function ExportPanel() {
             />
           </label>
           <label>
-            性别
+            {t('export.patientSex')}
             <input
               type="text"
               value={options.patientOverride.patientSex ?? ''}
@@ -298,11 +456,11 @@ export function ExportPanel() {
             />
           </label>
           <label>
-            年龄
+            {t('export.patientAge')}
             <input
               type="text"
               value={options.patientOverride.patientAge ?? ''}
-              placeholder="例如 045Y"
+              placeholder={t('export.patientAgePlaceholder')}
               onChange={(event) =>
                 setOptions({
                   patientOverride: {
@@ -323,10 +481,10 @@ export function ExportPanel() {
             setOptions({ includeJpegMetadata: event.target.checked })
           }
         />
-        写入 JPEG Meta（ImageDescription / UserComment）
+        {t('export.writeJpegMeta')}
       </label>
       <label>
-        每批数量 {options.batchSize}
+        {t('export.batchSize', { count: options.batchSize })}
         <input
           type="number"
           min="1"
@@ -347,7 +505,7 @@ export function ExportPanel() {
           checked={options.resumeMode}
           onChange={(event) => setOptions({ resumeMode: event.target.checked })}
         />
-        断点继续
+        {t('export.resumeMode')}
       </label>
       <div className="button-row">
         <button
@@ -355,33 +513,33 @@ export function ExportPanel() {
           disabled={running}
           onClick={() => void handleExport('all')}
         >
-          {running ? '导出中...' : '开始批量导出'}
+          {running ? t('export.exporting') : t('export.startBatchExport')}
         </button>
         <button
           type="button"
           disabled={running || failedCount === 0}
           onClick={() => void handleExport('failed')}
         >
-          只重试失败项
+          {t('export.retryFailed')}
         </button>
       </div>
       {running ? (
         <div className="button-row">
           <button type="button" disabled={paused} onClick={handlePause}>
-            暂停
+            {t('export.pause')}
           </button>
           <button type="button" disabled={!paused} onClick={handleResume}>
-            继续
+            {t('export.resume')}
           </button>
           <button type="button" onClick={handleCancel}>
-            取消
+            {t('export.cancel')}
           </button>
         </div>
       ) : null}
-      {message ? <p className="inline-status">{message}</p> : null}
+      {message ? <p className="inline-status">{formatLocalizedText(locale, message)}</p> : null}
       {options.includePersonalInfo ? (
         <p className="privacy-warning">
-          当前会把 PatientName / PatientID 烧录到 JPEG。
+          {t('export.privacyWarning')}
         </p>
       ) : null}
     </section>

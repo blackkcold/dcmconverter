@@ -1,16 +1,19 @@
-# Architecture
+# Architecture / 架构
 
-## 模块边界
+## Module Boundaries / 模块边界
 
-| 模块 | 职责 |
+| Module / 模块 | Responsibility / 职责 |
 |---|---|
-| `src/dicom` | 文件导入、metadata 解析、Transfer Syntax 判断、Study 分组、Cornerstone 文件注册 |
-| `src/viewer` | Cornerstone 初始化、viewport 生命周期、窗宽窗位和 stack navigation |
-| `src/export` | Canvas 克隆、overlay 烧录、JPEG 编码、ZIP 打包、文件命名 |
-| `src/store` | DICOM、viewer、export 三类状态 |
-| `src/components` | UI 展示和用户事件派发 |
+| `src/dicom` | 文件导入、metadata 解析、Transfer Syntax 判断、Study 分组、Cornerstone 文件注册。<br>File ingest, metadata parsing, Transfer Syntax checks, Study grouping, and Cornerstone file registration. |
+| `src/viewer` | Cornerstone 初始化、viewport 生命周期、窗宽窗位和 stack navigation。<br>Cornerstone initialization, viewport lifecycle, window/level, and stack navigation. |
+| `src/export` | Canvas 克隆、overlay 烧录、JPEG 编码、ZIP 打包、共享命名规则与文件名模板。<br>Canvas cloning, overlay burn-in, JPEG encoding, ZIP packaging, and shared naming rules and filename templates. |
+| `src/store` | DICOM、viewer、export 三类状态。<br>State for DICOM, viewer, and export concerns. |
+| `src/components` | UI 展示和用户事件派发。<br>UI presentation and user event dispatch. |
 
-## 数据流
+## Data Flow / 数据流
+
+应用遵循“先导入、后解析、再分组、最后渲染/导出”的单向流程。<br>
+The app follows a one-way flow: ingest first, then parse, then group, and finally render or export.
 
 ```text
 File input / directory input
@@ -21,8 +24,8 @@ File input / directory input
   -> exportCanvasAsJpeg()
 ```
 
-## 约束
+## Constraints / 约束
 
-- React 组件不直接解析 DICOM tag。
-- Cornerstone API 集中在 `dicom/cornerstoneInit.ts` 和 `viewer/viewportController.ts`。
-- 导出默认匿名，敏感字段不进入文件名。
+- React 组件不直接解析 DICOM tag。<br>React components do not parse DICOM tags directly.
+- Cornerstone API 集中在 `dicom/cornerstoneInit.ts` 和 `viewer/viewportController.ts`。<br>Cornerstone APIs are centralized in `dicom/cornerstoneInit.ts` and `viewer/viewportController.ts`.
+- 导出默认匿名，文件名模板只允许主字段白名单，敏感字段不进入文件名。<br>Export defaults to anonymized output, filename templates only allow the main-field whitelist, and sensitive fields never enter filenames.

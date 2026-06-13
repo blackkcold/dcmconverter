@@ -1,7 +1,11 @@
-import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
+import {
+  createLocalizedAppError,
+  getCurrentLocale,
+  type Locale
+} from '@/i18n';
 
 export interface WritableFileStreamLike {
   write(data: Blob | BufferSource | string): Promise<void>;
@@ -47,16 +51,17 @@ export function isDirectoryWriteSupported(): boolean {
   return typeof getDirectoryPicker() === 'function';
 }
 
-export async function requestExportDirectory(): Promise<
-  Result<FileSystemDirectoryHandleLike, AppError>
-> {
+export async function requestExportDirectory(
+  locale: Locale = getCurrentLocale()
+): Promise<Result<FileSystemDirectoryHandleLike, AppError>> {
   const picker = getDirectoryPicker();
 
   if (!picker) {
     return err(
-      createAppError(
+      createLocalizedAppError(
+        locale,
         'ZIP_EXPORT_FAILED',
-        '当前浏览器不支持选择目标文件夹写入，请使用 ZIP 导出。'
+        'error.browserDoesNotSupportFolderExport'
       )
     );
   }
@@ -65,9 +70,13 @@ export async function requestExportDirectory(): Promise<
     return ok(await picker({ mode: 'readwrite', id: 'dcm-jpeg-export' }));
   } catch (cause) {
     return err(
-      createAppError('ZIP_EXPORT_FAILED', '选择导出文件夹失败或已取消。', {
-        cause
-      })
+      createLocalizedAppError(
+        locale,
+        'ZIP_EXPORT_FAILED',
+        'error.chooseExportDirectoryFailed',
+        undefined,
+        { cause }
+      )
     );
   }
 }
@@ -75,11 +84,14 @@ export async function requestExportDirectory(): Promise<
 export async function writeBlobToDirectory(
   directoryHandle: FileSystemDirectoryHandleLike,
   relativePath: string,
-  blob: Blob
+  blob: Blob,
+  locale: Locale = getCurrentLocale()
 ): Promise<void> {
   const { directory, fileName } = await resolveDirectoryForRelativePath(
     directoryHandle,
-    relativePath
+    relativePath,
+    locale,
+    true
   );
   const fileHandle = await directory.getFileHandle(fileName, { create: true });
   const writable = await fileHandle.createWritable();
@@ -90,18 +102,25 @@ export async function writeBlobToDirectory(
 export async function writeTextToDirectory(
   directoryHandle: FileSystemDirectoryHandleLike,
   fileName: string,
-  value: string
+  value: string,
+  locale: Locale = getCurrentLocale()
 ): Promise<void> {
   const blob = new Blob([value], { type: 'text/plain;charset=utf-8' });
-  await writeBlobToDirectory(directoryHandle, fileName, blob);
+  await writeBlobToDirectory(directoryHandle, fileName, blob, locale);
 }
 
 export async function readTextFromDirectory(
   directoryHandle: FileSystemDirectoryHandleLike,
-  fileName: string
+  relativePath: string
 ): Promise<string | undefined> {
   try {
-    const fileHandle = await directoryHandle.getFileHandle(fileName);
+    const { directory, fileName } = await resolveDirectoryForRelativePath(
+      directoryHandle,
+      relativePath,
+      getCurrentLocale(),
+      false
+    );
+    const fileHandle = await directory.getFileHandle(fileName);
     const file = await fileHandle.getFile();
     return await file.text();
   } catch {
@@ -115,25 +134,34 @@ function getDirectoryPicker(): WindowWithDirectoryPicker['showDirectoryPicker'] 
 
 async function resolveDirectoryForRelativePath(
   rootDirectory: FileSystemDirectoryHandleLike,
-  relativePath: string
+  relativePath: string,
+  locale: Locale,
+  createDirectories: boolean
 ): Promise<{ directory: FileSystemDirectoryHandleLike; fileName: string }> {
   const parts = relativePath.split('/').filter(Boolean);
   const fileName = parts.at(-1);
 
   if (!fileName || parts.some((part) => part === '.' || part === '..')) {
-    throw createAppError('ZIP_EXPORT_FAILED', 'Invalid export relative path');
+    throw createLocalizedAppError(
+      locale,
+      'ZIP_EXPORT_FAILED',
+      'error.invalidExportRelativePath'
+    );
   }
 
   let directory = rootDirectory;
   for (const segment of parts.slice(0, -1)) {
     if (!directory.getDirectoryHandle) {
-      throw createAppError(
+      throw createLocalizedAppError(
+        locale,
         'ZIP_EXPORT_FAILED',
-        '当前浏览器不支持创建分层导出目录，请改用 ZIP 或平铺导出。'
+        'error.browserDoesNotSupportNestedDirectories'
       );
     }
 
-    directory = await directory.getDirectoryHandle(segment, { create: true });
+    directory = createDirectories
+      ? await directory.getDirectoryHandle(segment, { create: true })
+      : await directory.getDirectoryHandle(segment);
   }
 
   return { directory, fileName };

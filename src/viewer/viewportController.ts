@@ -1,11 +1,11 @@
 import { initializeCornerstone } from '@/dicom/cornerstoneInit';
 import { addFileToCornerstoneFileManager } from '@/dicom/dicomFileManager';
-import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
 import { log } from '@/utils/logger';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
 import { windowLevelToVoiRange } from '@/viewer/windowLevel';
+import { createLocalizedAppError, getCurrentLocale, type Locale } from '@/i18n';
 
 type RenderingEngineConstructor = new (id: string) => RenderingEngineLike;
 
@@ -45,14 +45,15 @@ let viewportSequence = 0;
 
 export async function renderDicomFileToElement(
   file: File,
-  element: HTMLDivElement
+  element: HTMLDivElement,
+  locale: Locale = getCurrentLocale()
 ): Promise<Result<ActiveViewportController, AppError>> {
-  const initResult = await initializeCornerstone();
+  const initResult = await initializeCornerstone(locale);
   if (!initResult.ok) {
     return initResult;
   }
 
-  const imageIdResult = await addFileToCornerstoneFileManager(file);
+  const imageIdResult = await addFileToCornerstoneFileManager(file, locale);
   if (!imageIdResult.ok) {
     return imageIdResult;
   }
@@ -63,7 +64,11 @@ export async function renderDicomFileToElement(
 
     if (!RenderingEngine) {
       return err(
-        createAppError('VIEWPORT_INIT_FAILED', 'Cornerstone RenderingEngine missing')
+        createLocalizedAppError(
+          locale,
+          'VIEWPORT_INIT_FAILED',
+          'error.cornerstoneRenderingEngineMissing'
+        )
       );
     }
 
@@ -110,9 +115,13 @@ export async function renderDicomFileToElement(
     });
 
     return err(
-      createAppError('VIEWPORT_RENDER_FAILED', 'Failed to render DICOM viewport', {
-        cause
-      })
+      createLocalizedAppError(
+        locale,
+        'VIEWPORT_RENDER_FAILED',
+        'error.failedToRenderViewport',
+        undefined,
+        { cause }
+      )
     );
   }
 }

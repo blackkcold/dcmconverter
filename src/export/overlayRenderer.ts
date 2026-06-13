@@ -1,10 +1,8 @@
 import type { DicomMetadata } from '@/dicom/dicomTypes';
+import { createTranslator, getCurrentLocale, type Locale } from '@/i18n';
 import type { WindowLevel } from '@/viewer/viewerTypes';
 
 import type { ExportOptions } from './exportTypes';
-
-export const NON_DIAGNOSTIC_WATERMARK =
-  'Non-diagnostic JPEG · Exported from local DICOM tool';
 
 export interface OverlayLineGroup {
   anchor: 'leftTop' | 'leftBottom' | 'rightTop' | 'rightBottom' | 'footer';
@@ -15,50 +13,54 @@ export function buildOverlayLineGroups(
   metadata: DicomMetadata,
   options: Pick<ExportOptions, 'anonymizeOverlay'> &
     Partial<Pick<ExportOptions, 'includePersonalInfo'>>,
-  windowLevel?: WindowLevel
+  windowLevel?: WindowLevel,
+  locale: Locale = getCurrentLocale()
 ): OverlayLineGroup[] {
+  const t = createTranslator(locale);
   const shouldAnonymize = options.anonymizeOverlay && !options.includePersonalInfo;
   const patientName = shouldAnonymize
-    ? 'Anonymous'
-    : metadata.patientName ?? 'Unknown';
-  const patientId = shouldAnonymize ? 'Hidden' : metadata.patientId ?? 'Unknown';
+    ? t('overlay.anonymous')
+    : metadata.patientName ?? t('overlay.unknown');
+  const patientId = shouldAnonymize
+    ? t('overlay.hidden')
+    : metadata.patientId ?? t('overlay.unknown');
 
   return [
     {
       anchor: 'leftTop',
       lines: [
-        `Patient: ${patientName}`,
-        `ID: ${patientId}`,
-        `Sex/Age: ${metadata.patientSex ?? '?'} / ${metadata.patientAge ?? '?'}`
+        `${t('overlay.patient')}: ${patientName}`,
+        `${t('overlay.id')}: ${patientId}`,
+        `${t('overlay.sexAge')}: ${metadata.patientSex ?? '?'} / ${metadata.patientAge ?? '?'}`
       ]
     },
     {
       anchor: 'leftBottom',
       lines: [
-        `Study: ${metadata.studyDate ?? 'unknown'} ${metadata.studyTime ?? ''}`.trim(),
-        metadata.studyDescription ?? 'No study description'
+        `${t('overlay.study')}: ${metadata.studyDate ?? t('overlay.unknown')} ${metadata.studyTime ?? ''}`.trim(),
+        metadata.studyDescription ?? t('overlay.noStudyDescription')
       ]
     },
     {
       anchor: 'rightTop',
       lines: [
-        `Modality: ${metadata.modality ?? 'unknown'}`,
-        `Series: ${metadata.seriesNumber ?? 'unknown'}`,
-        `Instance: ${metadata.instanceNumber ?? 'unknown'}`
+        `${t('overlay.modality')}: ${metadata.modality ?? t('overlay.unknown')}`,
+        `${t('overlay.series')}: ${metadata.seriesNumber ?? t('overlay.unknown')}`,
+        `${t('overlay.instance')}: ${metadata.instanceNumber ?? t('overlay.unknown')}`
       ]
     },
     {
       anchor: 'rightBottom',
       lines: [
-        `WC/WW: ${windowLevel?.center ?? metadata.windowCenter ?? 'unknown'} / ${
-          windowLevel?.width ?? metadata.windowWidth ?? 'unknown'
+        `${t('overlay.windowLevel')}: ${windowLevel?.center ?? metadata.windowCenter ?? t('overlay.unknown')} / ${
+          windowLevel?.width ?? metadata.windowWidth ?? t('overlay.unknown')
         }`,
-        `Size: ${metadata.rows ?? '?'} x ${metadata.columns ?? '?'}`
+        `${t('overlay.size')}: ${metadata.rows ?? '?'} x ${metadata.columns ?? '?'}`
       ]
     },
     {
       anchor: 'footer',
-      lines: [NON_DIAGNOSTIC_WATERMARK]
+      lines: [t('overlay.nonDiagnosticWatermark')]
     }
   ];
 }
@@ -70,9 +72,10 @@ export function renderOverlay(
   metadata: DicomMetadata,
   options: Pick<ExportOptions, 'anonymizeOverlay'> &
     Partial<Pick<ExportOptions, 'includePersonalInfo'>>,
-  windowLevel?: WindowLevel
+  windowLevel?: WindowLevel,
+  locale: Locale = getCurrentLocale()
 ): void {
-  const groups = buildOverlayLineGroups(metadata, options, windowLevel);
+  const groups = buildOverlayLineGroups(metadata, options, windowLevel, locale);
   const margin = 16;
   const lineHeight = 18;
 
@@ -89,6 +92,10 @@ export function renderOverlay(
   }
 
   context.restore();
+}
+
+export function getNonDiagnosticWatermark(locale: Locale = getCurrentLocale()): string {
+  return createTranslator(locale)('overlay.nonDiagnosticWatermark');
 }
 
 function drawGroup(

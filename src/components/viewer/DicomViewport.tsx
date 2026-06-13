@@ -10,6 +10,13 @@ import {
   useActiveDicomMetadata,
   useDicomStore
 } from '@/store/useDicomStore';
+import {
+  createLocalizedText,
+  formatLocalizedText,
+  useLocaleStore,
+  useTranslator,
+  type LocalizedText
+} from '@/i18n';
 import { useViewerStore } from '@/store/useViewerStore';
 import { getNextSeriesFileId } from '@/viewer/stackNavigation';
 
@@ -32,7 +39,11 @@ export function DicomViewport() {
   const metadata = useActiveDicomMetadata();
   const { activeFileId, studies, setActiveFileId } = useDicomStore();
   const { windowCenter, windowWidth, zoom } = useViewerStore();
-  const [status, setStatus] = useState('等待导入 DICOM');
+  const locale = useLocaleStore((state) => state.locale);
+  const t = useTranslator();
+  const [status, setStatus] = useState<LocalizedText | string>(
+    createLocalizedText('viewer.waitingImport')
+  );
   const [stageSize, setStageSize] = useState<ViewportSize>({
     width: 0,
     height: 0
@@ -120,7 +131,16 @@ export function DicomViewport() {
 
   useEffect(() => {
     const host = hostRef.current;
-    if (!host || !activeFile) {
+    if (!host) {
+      return;
+    }
+
+    if (!activeFile) {
+      controllerRef.current = undefined;
+      host.replaceChildren();
+      queueMicrotask(() =>
+        setStatus(createLocalizedText('viewer.waitingImport'))
+      );
       return;
     }
 
@@ -128,9 +148,11 @@ export function DicomViewport() {
     let cleanup: (() => void) | undefined;
     controllerRef.current = undefined;
     host.replaceChildren();
-    setStatus('正在初始化 Cornerstone viewport...');
+    queueMicrotask(() =>
+      setStatus(createLocalizedText('viewer.initializing'))
+    );
 
-    renderDicomFileToElement(activeFile.file, host).then((result) => {
+    renderDicomFileToElement(activeFile.file, host, locale).then((result) => {
       if (disposed) {
         if (result.ok) {
           result.value.dispose();
@@ -141,7 +163,7 @@ export function DicomViewport() {
       if (result.ok) {
         controllerRef.current = result.value;
         cleanup = result.value.dispose;
-        setStatus(`已加载 ${activeFile.name}`);
+        setStatus(createLocalizedText('viewer.loadedFile', { name: activeFile.name }));
         const currentWindowLevel = normalizedRef.current;
         result.value.setWindowLevel(
           currentWindowLevel.center,
@@ -159,7 +181,7 @@ export function DicomViewport() {
       controllerRef.current = undefined;
       cleanup?.();
     };
-  }, [activeFile]);
+  }, [activeFile, locale]);
 
   return (
     <div ref={stageRef} className="viewport-stage">
@@ -170,10 +192,10 @@ export function DicomViewport() {
           data-testid="dicom-viewport"
           style={{ transform: `scale(${zoom})` }}
         >
-          {!activeFile ? <p className="viewport-placeholder">未选择 DICOM</p> : null}
+          {!activeFile ? <p className="viewport-placeholder">{t('viewer.noSelection')}</p> : null}
         </div>
         <div className="viewport-overlay" aria-live="polite">
-          <span>{status}</span>
+          <span>{formatLocalizedText(locale, status)}</span>
           <span>
             WC {normalized.center} / WW {normalized.width}
           </span>

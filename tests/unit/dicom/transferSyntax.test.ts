@@ -17,6 +17,7 @@ describe('transferSyntax', () => {
   });
 
   it('returns a user-facing unsupported message', () => {
-    expect(getUnsupportedTransferSyntaxMessage()).toContain('Transfer Syntax');
+    expect(getUnsupportedTransferSyntaxMessage('en')).toContain('Transfer Syntax');
+    expect(getUnsupportedTransferSyntaxMessage('zh-CN')).toContain('该 DICOM 文件');
   });
 });

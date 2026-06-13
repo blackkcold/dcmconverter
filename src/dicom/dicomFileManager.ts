@@ -1,7 +1,7 @@
-import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
+import { createLocalizedAppError, getCurrentLocale, type Locale } from '@/i18n';
 
 type DicomImageLoaderModule = {
   wadouri?: {
@@ -13,7 +13,8 @@ type DicomImageLoaderModule = {
 };
 
 export async function addFileToCornerstoneFileManager(
-  file: File
+  file: File,
+  locale: Locale = getCurrentLocale()
 ): Promise<Result<string, AppError>> {
   try {
     const loader = (await import('@cornerstonejs/dicom-image-loader')) as unknown as
@@ -23,9 +24,10 @@ export async function addFileToCornerstoneFileManager(
 
     if (!imageId) {
       return err(
-        createAppError(
+        createLocalizedAppError(
+          locale,
           'DICOM_DECODE_FAILED',
-          'Cornerstone file manager is not available'
+          'error.cornerstoneFileManagerUnavailable'
         )
       );
     }
@@ -33,9 +35,13 @@ export async function addFileToCornerstoneFileManager(
     return ok(imageId);
   } catch (cause) {
     return err(
-      createAppError('DICOM_DECODE_FAILED', 'Failed to register DICOM file', {
-        cause
-      })
+      createLocalizedAppError(
+        locale,
+        'DICOM_DECODE_FAILED',
+        'error.failedToRegisterDicomFile',
+        undefined,
+        { cause }
+      )
     );
   }
 }

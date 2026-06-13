@@ -3,17 +3,22 @@ import type { Types } from '@cornerstonejs/core';
 import { initializeCornerstone } from '@/dicom/cornerstoneInit';
 import { addFileToCornerstoneFileManager } from '@/dicom/dicomFileManager';
 import type { DicomMetadata, LocalDicomFile } from '@/dicom/dicomTypes';
-import { createAppError } from '@/utils/errors';
 import type { AppError } from '@/utils/errors';
 import type { Result } from '@/utils/result';
 import { err, ok } from '@/utils/result';
 import { normalizeWindowLevel } from '@/viewer/windowLevel';
 import type { WindowLevel } from '@/viewer/viewerTypes';
+import {
+  createLocalizedAppError,
+  getCurrentLocale,
+  type Locale
+} from '@/i18n';
 
 export interface RenderDicomToCanvasInput {
   localFile: LocalDicomFile;
   metadata: DicomMetadata;
   windowLevel?: WindowLevel;
+  locale?: Locale;
 }
 
 export type DicomCanvasRenderer = (
@@ -23,12 +28,16 @@ export type DicomCanvasRenderer = (
 export async function renderDicomFileToCanvas(
   input: RenderDicomToCanvasInput
 ): Promise<Result<HTMLCanvasElement, AppError>> {
-  const initResult = await initializeCornerstone();
+  const locale = input.locale ?? getCurrentLocale();
+  const initResult = await initializeCornerstone(locale);
   if (!initResult.ok) {
     return initResult;
   }
 
-  const imageIdResult = await addFileToCornerstoneFileManager(input.localFile.file);
+  const imageIdResult = await addFileToCornerstoneFileManager(
+    input.localFile.file,
+    locale
+  );
   if (!imageIdResult.ok) {
     return imageIdResult;
   }
@@ -41,7 +50,8 @@ export async function renderDicomFileToCanvas(
     const canvas = renderCornerstoneImageToCanvas(
       image,
       input.metadata,
-      input.windowLevel
+      input.windowLevel,
+      locale
     );
 
     try {
@@ -53,10 +63,13 @@ export async function renderDicomFileToCanvas(
     return ok(canvas);
   } catch (cause) {
     return err(
-      createAppError('DICOM_DECODE_FAILED', 'Failed to render DICOM image', {
-        fileId: input.localFile.id,
-        cause
-      })
+      createLocalizedAppError(
+        locale,
+        'DICOM_DECODE_FAILED',
+        'error.failedToRenderDicomImage',
+        undefined,
+        { fileId: input.localFile.id, cause }
+      )
     );
   }
 }
@@ -75,7 +88,8 @@ export async function defaultDicomCanvasRenderer(
 function renderCornerstoneImageToCanvas(
   image: Types.IImage,
   metadata: DicomMetadata,
-  requestedWindowLevel?: WindowLevel
+  requestedWindowLevel: WindowLevel | undefined,
+  locale: Locale
 ): HTMLCanvasElement {
   const width = metadata.columns ?? image.columns ?? image.width;
   const height = metadata.rows ?? image.rows ?? image.height;
@@ -85,7 +99,11 @@ function renderCornerstoneImageToCanvas(
 
   const context = canvas.getContext('2d');
   if (!context) {
-    throw createAppError('JPEG_EXPORT_FAILED', 'Canvas 2D context is unavailable');
+    throw createLocalizedAppError(
+      locale,
+      'JPEG_EXPORT_FAILED',
+      'error.canvas2dContextUnavailable'
+    );
   }
 
   if (image.color || image.rgba || image.numberOfComponents >= 3) {
