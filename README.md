@@ -26,6 +26,7 @@
 | 在线体验 / Live demo | <https://blackkcold.github.io/dcmconverter/> |
 | 发布页 / Releases | <https://github.com/blackkcold/dcmconverter/releases> |
 | 许可 / License | [LICENSE](LICENSE) |
+| 许可说明 / License Guide | [docs/LICENSE_GUIDE.md](docs/LICENSE_GUIDE.md) |
 | 产品说明 / Product doc | [docs/README_PRODUCT.md](docs/README_PRODUCT.md) |
 | 安全与隐私 / Security & Privacy | [docs/SECURITY_PRIVACY.md](docs/SECURITY_PRIVACY.md) |
 
