@@ -7,6 +7,14 @@
 - 在线体验：<https://blackkcold.github.io/dcmconverter/>
 - 发布页：<https://github.com/blackkcold/dcmconverter/releases>
 
+## 开源许可
+
+本项目采用 MIT License。
+
+- 允许自由使用、复制、修改、合并、发布、分发、再许可和出售。
+- 分发时需要保留原始版权声明与许可文本。
+- 软件按“现状”提供，不提供任何明示或暗示担保。
+
 ## 功能范围
 
 - 选择单个或多个 `.dcm / .dicom / .ima` 文件。
