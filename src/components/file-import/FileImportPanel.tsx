@@ -41,16 +41,22 @@ async function readDirectoryRecursive(
   const files: File[] = [];
 
   for (const entry of entries) {
-    if (entry.isFile) {
-      const file = await fileEntryToFile(entry as FileSystemFileEntry);
-      Object.defineProperty(file, 'webkitRelativePath', {
-        value: entry.fullPath.slice(1),
-        configurable: true
-      });
-      files.push(file);
-    } else if (entry.isDirectory) {
-      files.push(
-        ...(await readDirectoryRecursive(entry as FileSystemDirectoryEntry))
+    try {
+      if (entry.isFile) {
+        const file = await fileEntryToFile(entry as FileSystemFileEntry);
+        Object.defineProperty(file, 'webkitRelativePath', {
+          value: entry.fullPath.slice(1),
+          configurable: true
+        });
+        files.push(file);
+      } else if (entry.isDirectory) {
+        const subFiles = await readDirectoryRecursive(entry as FileSystemDirectoryEntry);
+        files.push(...subFiles);
+      }
+    } catch (cause) {
+      console.warn(
+        `Skipping "${entry.name}" in "${dirEntry.name}": could not read`,
+        cause
       );
     }
   }
@@ -66,18 +72,54 @@ async function getFilesFromDataTransfer(dt: DataTransfer): Promise<File[]> {
     const entry = item.webkitGetAsEntry?.();
     if (!entry) {
       const file = item.getAsFile();
-      if (file) files.push(file);
+      if (file) {
+        Object.defineProperty(file, 'webkitRelativePath', {
+          value: file.name,
+          configurable: true
+        });
+        files.push(file);
+      }
       continue;
     }
 
     if (entry.isFile) {
-      files.push(await fileEntryToFile(entry as FileSystemFileEntry));
+      try {
+        const file = await fileEntryToFile(entry as FileSystemFileEntry);
+        Object.defineProperty(file, 'webkitRelativePath', {
+          value: entry.fullPath.slice(1) || entry.name,
+          configurable: true
+        });
+        files.push(file);
+      } catch (cause) {
+        console.warn(`Skipping file "${entry.name}": could not read`, cause);
+      }
     } else if (entry.isDirectory) {
-      files.push(
-        ...(await readDirectoryRecursive(entry as FileSystemDirectoryEntry))
-      );
+      try {
+        const subFiles = await readDirectoryRecursive(entry as FileSystemDirectoryEntry);
+        files.push(...subFiles);
+      } catch (cause) {
+        console.warn(
+          `Skipping directory "${entry.name}": could not traverse`,
+          cause
+        );
+      }
     }
   }
+
+  // Fallback: use dt.files when items traversal yielded nothing (Firefox etc.)
+  if (files.length === 0 && dt.files.length > 0) {
+    for (let i = 0; i < dt.files.length; i++) {
+      const file = dt.files[i];
+      if (!file) continue;
+      const record = file as File & { webkitRelativePath?: string };
+      Object.defineProperty(file, 'webkitRelativePath', {
+        value: record.webkitRelativePath ?? file.name,
+        configurable: true
+      });
+      files.push(file);
+    }
+  }
+
   return files;
 }
 

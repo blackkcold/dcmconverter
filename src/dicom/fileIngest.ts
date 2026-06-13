@@ -16,6 +16,12 @@ const KNOWN_NON_DICOM_EXTENSIONS = new Set([
   '.zip'
 ]);
 
+const KNOWN_NON_DICOM_NAMES = new Set([
+  '.DS_Store',
+  'DICOMDIR',
+  'Thumbs.db'
+]);
+
 export function ingestFiles(
   input: FileList | readonly File[],
   locale: Locale = getCurrentLocale()
@@ -69,7 +75,7 @@ export function isPotentialDicomFile(file: File): boolean {
     return false;
   }
 
-  return extension === '';
+  return extension === '' && !KNOWN_NON_DICOM_NAMES.has(file.name);
 }
 
 export function getRelativePath(file: File): string {

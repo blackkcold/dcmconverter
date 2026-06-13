@@ -53,4 +53,15 @@ describe('fileIngest', () => {
     expect(isPotentialDicomFile(file)).toBe(true);
     expect(getRelativePath(file)).toBe('IM0001');
   });
+
+  it('skips known non-DICOM extensionless files such as .DS_Store', () => {
+    expect(isPotentialDicomFile(createFile('.DS_Store'))).toBe(false);
+    expect(isPotentialDicomFile(createFile('DICOMDIR'))).toBe(false);
+    expect(isPotentialDicomFile(createFile('Thumbs.db'))).toBe(false);
+  });
+
+  it('still accepts legitimate extensionless DICOM files', () => {
+    expect(isPotentialDicomFile(createFile('IM0001'))).toBe(true);
+    expect(isPotentialDicomFile(createFile('CT12345'))).toBe(true);
+  });
 });
