@@ -29,9 +29,10 @@ describe('treeSelection', () => {
 
     expect(tree[0]?.name).toBe('root');
     expect(tree[0]?.fileIds).toEqual(['a', 'b', 'c']);
-    expect(tree[0]?.children.map((node) => node.name)).toEqual([
-      'other',
-      'series'
+    expect(tree[0]?.children.map((node) => node.name)).toEqual(['other', 'series']);
+    expect(tree[0]?.children[1]?.children.map((node) => node.name)).toEqual([
+      'a.dcm',
+      'b.dcm'
     ]);
   });
 

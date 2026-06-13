@@ -1,10 +1,7 @@
-import type {
-  DicomMetadata,
-  DicomStudy,
-  LocalDicomFile
-} from '@/dicom/dicomTypes';
+import type { DicomMetadata, DicomStudy, LocalDicomFile } from '@/dicom/dicomTypes';
 
-import type { ExportJob, ExportOptions } from './exportTypes';
+import { applyPatientOverride } from './effectiveMetadata';
+import type { ExportJob, ExportOptions, MetadataFolderField } from './exportTypes';
 import { createJpegFileName } from './fileNamer';
 import { hashJson } from './hash';
 
@@ -34,21 +31,22 @@ export function buildExportJobs(input: BuildExportJobsInput): {
     datasetHash,
     optionsHash,
     jobs: sortedFiles.map((file, index) => {
-      const metadata = input.metadataByFileId[file.id] ?? {};
+      const metadata = applyPatientOverride(
+        input.metadataByFileId[file.id] ?? {},
+        input.options
+      );
       const metadataHash = hashJson(metadata);
       const outputDirectory = createOutputDirectory(
         file,
         metadata,
-        input.options.outputLayout
+        input.options.outputLayout,
+        input.options.metadataFolderField
       );
       const directoryKey = outputDirectory ?? '';
       const sequenceNumber = (sequenceByDirectory.get(directoryKey) ?? 0) + 1;
       sequenceByDirectory.set(directoryKey, sequenceNumber);
 
-      const usedNames = getUsedNamesForDirectory(
-        usedNamesByDirectory,
-        directoryKey
-      );
+      const usedNames = getUsedNamesForDirectory(usedNamesByDirectory, directoryKey);
       const outputFileName = createJpegFileName(
         metadata,
         file.id,
@@ -73,10 +71,7 @@ export function buildExportJobs(input: BuildExportJobsInput): {
   };
 }
 
-export function splitIntoBatches<T>(
-  items: readonly T[],
-  batchSize: number
-): T[][] {
+export function splitIntoBatches<T>(items: readonly T[], batchSize: number): T[][] {
   const normalizedBatchSize = Number.isFinite(batchSize)
     ? Math.max(1, Math.floor(batchSize))
     : 1;
@@ -95,9 +90,13 @@ export function hashExportOptions(options: ExportOptions): string {
     includeOverlay: options.includeOverlay,
     anonymizeOverlay: options.anonymizeOverlay,
     includePersonalInfo: options.includePersonalInfo,
+    patientOverrideEnabled: options.patientOverrideEnabled,
+    patientOverride: options.patientOverride,
+    includeJpegMetadata: options.includeJpegMetadata,
     overlayPosition: options.overlayPosition,
     useCurrentWindowLevel: options.useCurrentWindowLevel,
-    outputLayout: options.outputLayout
+    outputLayout: options.outputLayout,
+    metadataFolderField: options.metadataFolderField
   });
 }
 
@@ -115,14 +114,17 @@ function selectFiles(input: BuildExportJobsInput): LocalDicomFile[] {
   }
 
   const activeMetadata = input.metadataByFileId[input.activeFileId];
-  const activeSeriesId = activeMetadata?.seriesInstanceUID;
+  const activeSeriesId = activeMetadata
+    ? getSeriesSelectionKey(activeMetadata)
+    : undefined;
 
   if (!activeSeriesId) {
     return input.files.filter((file) => file.id === input.activeFileId);
   }
 
   return input.files.filter(
-    (file) => input.metadataByFileId[file.id]?.seriesInstanceUID === activeSeriesId
+    (file) =>
+      getSeriesSelectionKey(input.metadataByFileId[file.id] ?? {}) === activeSeriesId
   );
 }
 
@@ -137,6 +139,8 @@ function compareFilesByDicomOrder(
   return (
     compareString(left.studyDate, right.studyDate) ||
     compareNumber(left.seriesNumber, right.seriesNumber) ||
+    compareString(left.protocolName, right.protocolName) ||
+    compareString(left.seriesDescription, right.seriesDescription) ||
     compareNumber(left.instanceNumber, right.instanceNumber) ||
     a.relativePath.localeCompare(b.relativePath)
   );
@@ -153,10 +157,19 @@ function compareNumber(a?: number, b?: number): number {
 function createOutputDirectory(
   file: LocalDicomFile,
   metadata: DicomMetadata,
-  outputLayout: ExportOptions['outputLayout']
+  outputLayout: ExportOptions['outputLayout'],
+  metadataFolderField: MetadataFolderField
 ): string | undefined {
   if (outputLayout === 'flat') {
     return undefined;
+  }
+
+  if (outputLayout === 'dicomSmart') {
+    return createDicomSmartDirectory(metadata);
+  }
+
+  if (outputLayout === 'metadataField') {
+    return createMetadataFieldDirectory(metadata, metadataFolderField);
   }
 
   const seriesDirectory = createSeriesDirectory(metadata);
@@ -174,8 +187,6 @@ function createOutputDirectory(
 }
 
 function createSeriesDirectory(metadata: DicomMetadata): string {
-  const studyDate = metadata.studyDate ?? 'unknown';
-  const studyId = shortCode(metadata.studyInstanceUID);
   const seriesNumber =
     metadata.seriesNumber !== undefined && Number.isFinite(metadata.seriesNumber)
       ? Math.max(0, Math.floor(metadata.seriesNumber)).toString().padStart(3, '0')
@@ -184,8 +195,71 @@ function createSeriesDirectory(metadata: DicomMetadata): string {
   const seriesId = shortCode(metadata.seriesInstanceUID);
 
   return joinRelativePath(
-    safePathSegment(studyId ? `Study_${studyDate}_${studyId}` : `Study_${studyDate}`),
+    createStudyDirectory(metadata),
     safePathSegment(`S${seriesNumber}_${modality}_${seriesId ?? 'unknown'}`)
+  );
+}
+
+function createDicomSmartDirectory(metadata: DicomMetadata): string {
+  return joinRelativePath(
+    joinRelativePath(
+      createStudyDirectory(metadata),
+      safePathSegment(`Protocol_${metadata.protocolName ?? 'unknown'}`)
+    ),
+    createSmartSeriesSegment(metadata)
+  );
+}
+
+function createMetadataFieldDirectory(
+  metadata: DicomMetadata,
+  metadataFolderField: MetadataFolderField
+): string {
+  return joinRelativePath(
+    createStudyDirectory(metadata),
+    createMetadataFieldSegment(metadata, metadataFolderField)
+  );
+}
+
+function createStudyDirectory(metadata: DicomMetadata): string {
+  const studyDate = metadata.studyDate ?? 'unknown';
+  const studyId = shortCode(metadata.studyInstanceUID);
+  return safePathSegment(
+    studyId ? `Study_${studyDate}_${studyId}` : `Study_${studyDate}_unknown`
+  );
+}
+
+function createSmartSeriesSegment(metadata: DicomMetadata): string {
+  const seriesNumber =
+    metadata.seriesNumber !== undefined && Number.isFinite(metadata.seriesNumber)
+      ? Math.max(0, Math.floor(metadata.seriesNumber)).toString().padStart(3, '0')
+      : 'unknown';
+  const seriesId = shortCode(metadata.seriesInstanceUID);
+
+  return safePathSegment(
+    `S${seriesNumber}_${metadata.seriesDescription ?? 'unknown'}_${
+      seriesId ?? 'unknown'
+    }`
+  );
+}
+
+function createMetadataFieldSegment(
+  metadata: DicomMetadata,
+  metadataFolderField: MetadataFolderField
+): string {
+  if (metadataFolderField === 'protocolName') {
+    return safePathSegment(`Protocol_${metadata.protocolName ?? 'unknown'}`);
+  }
+
+  if (metadataFolderField === 'instanceNumber') {
+    const instance =
+      metadata.instanceNumber !== undefined && Number.isFinite(metadata.instanceNumber)
+        ? Math.max(0, Math.floor(metadata.instanceNumber)).toString().padStart(4, '0')
+        : 'unknown';
+    return safePathSegment(`Instance_${instance}`);
+  }
+
+  return safePathSegment(
+    `SeriesDescription_${metadata.seriesDescription ?? 'unknown'}`
   );
 }
 
@@ -206,7 +280,35 @@ function shortCode(value: string | undefined): string | undefined {
 }
 
 function safePathSegment(value: string): string {
-  return value.replace(/[^A-Za-z0-9_.-]+/g, '_').replace(/^_+|_+$/g, '');
+  const normalized = Array.from(value.trim())
+    .map((char) => (isUnsafePathChar(char) ? '_' : char))
+    .join('')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/[. ]+$/g, '');
+
+  return normalized || 'unknown';
+}
+
+function isUnsafePathChar(char: string): boolean {
+  return char.charCodeAt(0) < 32 || '<>:"/\\|?*'.includes(char);
+}
+
+function getSeriesSelectionKey(metadata: DicomMetadata): string | undefined {
+  if (metadata.seriesInstanceUID) {
+    return metadata.seriesInstanceUID;
+  }
+
+  const parts = [
+    metadata.seriesNumber,
+    metadata.modality,
+    metadata.protocolName,
+    metadata.seriesDescription
+  ].filter((part) => part !== undefined && part !== '');
+
+  return parts.length > 0 ? parts.join(':') : undefined;
 }
 
 function joinRelativePath(

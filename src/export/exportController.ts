@@ -3,9 +3,11 @@ import { cloneCanvas } from '@/export/canvasRenderer';
 import { renderOverlay } from '@/export/overlayRenderer';
 import type { WindowLevel } from '@/viewer/viewerTypes';
 
+import { applyPatientOverride } from './effectiveMetadata';
 import type { ExportOptions, JpegExportResult } from './exportTypes';
 import { createJpegFileName } from './fileNamer';
 import { encodeCanvasToJpeg } from './jpegEncoder';
+import { createJpegMetadataPayload } from './jpegMetadata';
 
 export async function exportCanvasAsJpeg(params: {
   canvas: HTMLCanvasElement;
@@ -17,26 +19,37 @@ export async function exportCanvasAsJpeg(params: {
 }): Promise<JpegExportResult> {
   const canvas = cloneCanvas(params.canvas);
   const context = canvas.getContext('2d');
+  const metadata = applyPatientOverride(params.metadata, params.options);
 
   if (params.options.includeOverlay && context) {
     renderOverlay(
       context,
       canvas.width,
       canvas.height,
-      params.metadata,
+      metadata,
       params.options,
       params.windowLevel
     );
   }
 
-  const encoded = await encodeCanvasToJpeg(canvas, params.options.jpegQuality);
+  const encoded = await encodeCanvasToJpeg(
+    canvas,
+    params.options.jpegQuality,
+    params.options.includeJpegMetadata
+      ? createJpegMetadataPayload({
+          metadata,
+          burnedInAnnotation: params.options.includeOverlay,
+          ...(params.windowLevel ? { windowLevel: params.windowLevel } : {})
+        })
+      : undefined
+  );
   if (!encoded.ok) {
     throw encoded.error;
   }
 
   return {
     fileName: createJpegFileName(
-      params.metadata,
+      metadata,
       params.fileId,
       params.usedNames ?? new Set(),
       params.options.includePersonalInfo

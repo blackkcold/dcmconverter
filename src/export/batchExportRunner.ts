@@ -1,4 +1,5 @@
 import type { DicomMetadata, LocalDicomFile } from '@/dicom/dicomTypes';
+import { applyPatientOverride } from '@/export/effectiveMetadata';
 import { renderOverlay } from '@/export/overlayRenderer';
 import { createAppError } from '@/utils/errors';
 import { normalizeWindowLevel } from '@/viewer/windowLevel';
@@ -26,6 +27,7 @@ import {
 } from './fileSystemAccess';
 import type { FileSystemDirectoryHandleLike } from './fileSystemAccess';
 import { encodeCanvasToJpeg } from './jpegEncoder';
+import { createJpegMetadataPayload } from './jpegMetadata';
 import { createZipFromFiles } from './zipExporter';
 import { defaultDicomCanvasRenderer } from './dicomCanvasRenderer';
 import type { DicomCanvasRenderer } from './dicomCanvasRenderer';
@@ -123,11 +125,7 @@ export class SerialBatchExportRunner {
       this.params.directoryHandle
         ? await readExportManifest(this.params.directoryHandle)
         : undefined;
-    const resumedJobs = applyResumeManifest(
-      built.jobs,
-      manifest,
-      built.optionsHash
-    );
+    const resumedJobs = applyResumeManifest(built.jobs, manifest, built.optionsHash);
 
     if (this.params.mode !== 'failed') {
       return { ...built, jobs: resumedJobs };
@@ -147,8 +145,9 @@ export class SerialBatchExportRunner {
           ...job,
           status: 'pending',
           retryCount:
-            (this.params.previousJobs?.find((previous) => previous.fileId === job.fileId)
-              ?.retryCount ?? 0) + 1
+            (this.params.previousJobs?.find(
+              (previous) => previous.fileId === job.fileId
+            )?.retryCount ?? 0) + 1
         }))
     };
   }
@@ -160,7 +159,10 @@ export class SerialBatchExportRunner {
     manifest: ExportManifest
   ): Promise<void> {
     const localFile = this.params.files.find((file) => file.id === job.fileId);
-    const metadata = this.params.metadataByFileId[job.fileId] ?? {};
+    const metadata = applyPatientOverride(
+      this.params.metadataByFileId[job.fileId] ?? {},
+      this.params.options
+    );
     const startedAt = new Date().toISOString();
 
     if (!localFile) {
@@ -196,7 +198,14 @@ export class SerialBatchExportRunner {
 
       const encoded = await encodeCanvasToJpeg(
         canvas,
-        this.params.options.jpegQuality
+        this.params.options.jpegQuality,
+        this.params.options.includeJpegMetadata
+          ? createJpegMetadataPayload({
+              metadata,
+              windowLevel,
+              burnedInAnnotation: this.params.options.includeOverlay
+            })
+          : undefined
       );
 
       if (!encoded.ok) {
@@ -205,10 +214,7 @@ export class SerialBatchExportRunner {
 
       if (this.params.options.exportMode === 'folder') {
         if (!this.params.directoryHandle) {
-          throw createAppError(
-            'ZIP_EXPORT_FAILED',
-            'Missing export directory handle'
-          );
+          throw createAppError('ZIP_EXPORT_FAILED', 'Missing export directory handle');
         }
 
         await writeBlobToDirectory(
@@ -248,10 +254,7 @@ export class SerialBatchExportRunner {
   }
 
   private resolveWindowLevel(metadata: DicomMetadata): WindowLevel {
-    if (
-      this.params.options.useCurrentWindowLevel &&
-      this.params.currentWindowLevel
-    ) {
+    if (this.params.options.useCurrentWindowLevel && this.params.currentWindowLevel) {
       return this.params.currentWindowLevel;
     }
 
@@ -259,10 +262,7 @@ export class SerialBatchExportRunner {
   }
 
   private async writeManifestIfNeeded(manifest: ExportManifest): Promise<void> {
-    if (
-      this.params.options.exportMode === 'folder' &&
-      this.params.directoryHandle
-    ) {
+    if (this.params.options.exportMode === 'folder' && this.params.directoryHandle) {
       await writeExportManifest(this.params.directoryHandle, manifest);
     }
   }
@@ -276,10 +276,7 @@ export class SerialBatchExportRunner {
   }
 
   private async writeFinalArtifacts(jobs: ExportJob[]): Promise<void> {
-    if (
-      this.params.options.exportMode !== 'folder' ||
-      !this.params.directoryHandle
-    ) {
+    if (this.params.options.exportMode !== 'folder' || !this.params.directoryHandle) {
       return;
     }
 
@@ -330,11 +327,7 @@ export class SerialBatchExportRunner {
     return { jobs, zipBlob: zip.value, reportJson, reportCsv };
   }
 
-  private updateJob(
-    jobs: ExportJob[],
-    jobId: string,
-    patch: Partial<ExportJob>
-  ): void {
+  private updateJob(jobs: ExportJob[], jobId: string, patch: Partial<ExportJob>): void {
     const index = jobs.findIndex((job) => job.id === jobId);
     if (index < 0) {
       return;

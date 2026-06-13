@@ -31,6 +31,7 @@ export function buildImportTree(files: readonly LocalDicomFile[]): ImportTreeNod
     const parts = file.relativePath.split('/').filter(Boolean);
     const fileName = parts.at(-1) ?? file.name;
     let parent = root;
+    root.fileIds.push(file.id);
 
     for (const segment of parts.slice(0, -1)) {
       const path = joinPath(parent.path, segment);
@@ -56,8 +57,7 @@ export function buildImportTree(files: readonly LocalDicomFile[]): ImportTreeNod
       childMap: new Map()
     };
 
-    root.children.push(fileNode);
-    root.fileIds.push(file.id);
+    parent.children.push(fileNode);
   }
 
   return root.children.map(toImportTreeNode).sort(compareImportTreeNodes);

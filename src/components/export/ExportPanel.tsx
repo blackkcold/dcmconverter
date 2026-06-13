@@ -159,12 +159,14 @@ export function ExportPanel() {
       </label>
       {options.exportMode === 'folder' ? (
         <div className="button-row">
-          <button type="button" disabled={!directorySupported} onClick={handleChooseDirectory}>
+          <button
+            type="button"
+            disabled={!directorySupported}
+            onClick={handleChooseDirectory}
+          >
             选择导出文件夹
           </button>
-          <span className="muted">
-            {targetDirectoryName ?? '尚未选择目标文件夹'}
-          </span>
+          <span className="muted">{targetDirectoryName ?? '尚未选择目标文件夹'}</span>
         </div>
       ) : null}
       <label>
@@ -177,23 +179,51 @@ export function ExportPanel() {
             })
           }
         >
+          <option value="dicomSmart">按 DICOM Meta 智能归类</option>
+          <option value="metadataField">按指定 Meta 字段归类</option>
           <option value="series">按 Study / Series 分文件夹</option>
           <option value="seriesSource">按 Series + 来源子目录</option>
           <option value="source">保留来源子目录</option>
           <option value="flat">平铺到同一目录</option>
         </select>
       </label>
+      {options.outputLayout === 'metadataField' ? (
+        <label>
+          归类字段
+          <select
+            value={options.metadataFolderField}
+            onChange={(event) =>
+              setOptions({
+                metadataFolderField: event.target
+                  .value as typeof options.metadataFolderField
+              })
+            }
+          >
+            <option value="seriesDescription">Series Description</option>
+            <option value="protocolName">Protocol Name</option>
+            <option value="instanceNumber">Instance</option>
+          </select>
+        </label>
+      ) : null}
       <label>
-        JPEG 质量 {options.jpegQuality.toFixed(2)}
+        JPEG 质量 {Math.round(options.jpegQuality * 100)}%
         <input
           type="range"
           min="0.85"
-          max="0.95"
+          max="1"
           step="0.01"
           value={options.jpegQuality}
           onChange={(event) => setOptions({ jpegQuality: Number(event.target.value) })}
         />
       </label>
+      <div className="button-row">
+        <button type="button" onClick={() => setOptions({ jpegQuality: 0.92 })}>
+          标准 92%
+        </button>
+        <button type="button" onClick={() => setOptions({ jpegQuality: 1 })}>
+          超高清 100%
+        </button>
+      </div>
       <label className="checkbox-row">
         <input
           type="checkbox"
@@ -224,6 +254,77 @@ export function ExportPanel() {
         />
         匿名 overlay
       </label>
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={options.patientOverrideEnabled}
+          onChange={(event) =>
+            setOptions({ patientOverrideEnabled: event.target.checked })
+          }
+        />
+        导出时覆盖患者姓名 / 性别 / 年龄
+      </label>
+      {options.patientOverrideEnabled ? (
+        <div className="patient-override-grid">
+          <label>
+            患者姓名
+            <input
+              type="text"
+              value={options.patientOverride.patientName ?? ''}
+              onChange={(event) =>
+                setOptions({
+                  patientOverride: {
+                    ...options.patientOverride,
+                    patientName: event.target.value
+                  }
+                })
+              }
+            />
+          </label>
+          <label>
+            性别
+            <input
+              type="text"
+              value={options.patientOverride.patientSex ?? ''}
+              placeholder="M / F / O"
+              onChange={(event) =>
+                setOptions({
+                  patientOverride: {
+                    ...options.patientOverride,
+                    patientSex: event.target.value
+                  }
+                })
+              }
+            />
+          </label>
+          <label>
+            年龄
+            <input
+              type="text"
+              value={options.patientOverride.patientAge ?? ''}
+              placeholder="例如 045Y"
+              onChange={(event) =>
+                setOptions({
+                  patientOverride: {
+                    ...options.patientOverride,
+                    patientAge: event.target.value
+                  }
+                })
+              }
+            />
+          </label>
+        </div>
+      ) : null}
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={options.includeJpegMetadata}
+          onChange={(event) =>
+            setOptions({ includeJpegMetadata: event.target.checked })
+          }
+        />
+        写入 JPEG Meta（ImageDescription / UserComment）
+      </label>
       <label>
         每批数量 {options.batchSize}
         <input
@@ -249,7 +350,11 @@ export function ExportPanel() {
         断点继续
       </label>
       <div className="button-row">
-        <button type="button" disabled={running} onClick={() => void handleExport('all')}>
+        <button
+          type="button"
+          disabled={running}
+          onClick={() => void handleExport('all')}
+        >
           {running ? '导出中...' : '开始批量导出'}
         </button>
         <button
@@ -275,7 +380,9 @@ export function ExportPanel() {
       ) : null}
       {message ? <p className="inline-status">{message}</p> : null}
       {options.includePersonalInfo ? (
-        <p className="privacy-warning">当前会把 PatientName / PatientID 烧录到 JPEG。</p>
+        <p className="privacy-warning">
+          当前会把 PatientName / PatientID 烧录到 JPEG。
+        </p>
       ) : null}
     </section>
   );

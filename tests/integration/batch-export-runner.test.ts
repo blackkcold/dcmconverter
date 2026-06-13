@@ -25,7 +25,9 @@ function mockCanvas(): HTMLCanvasElement {
     height: 2,
     getContext: vi.fn(() => null),
     toBlob: vi.fn((callback: BlobCallback) =>
-      callback(new Blob(['jpeg'], { type: 'image/jpeg' }))
+      callback(
+        new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' })
+      )
     )
   } as unknown as HTMLCanvasElement;
 }
@@ -206,11 +208,11 @@ describe('SerialBatchExportRunner', () => {
     const result = await runner.run();
 
     expect(result.jobs[0]?.outputRelativePath).toBe(
-      'Study_20260612_study-a/S001_CT_series-a/0001_20260612_CT_S001_I0001_a.jpg'
+      'Study_20260612_study-a/Protocol_unknown/S001_unknown_series-a/0001_20260612_CT_S001_I0001_a.jpg'
     );
     expect(
       writes.has(
-        'Study_20260612_study-a/S001_CT_series-a/0001_20260612_CT_S001_I0001_a.jpg'
+        'Study_20260612_study-a/Protocol_unknown/S001_unknown_series-a/0001_20260612_CT_S001_I0001_a.jpg'
       )
     ).toBe(true);
   });

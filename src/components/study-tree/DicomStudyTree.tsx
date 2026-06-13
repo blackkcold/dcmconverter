@@ -12,14 +12,8 @@ import {
 import type { ImportTreeNode } from './treeSelection';
 
 export function DicomStudyTree() {
-  const {
-    files,
-    studies,
-    activeFileId,
-    setActiveFileId,
-    skippedFiles,
-    removeFiles
-  } = useDicomStore();
+  const { files, studies, activeFileId, setActiveFileId, skippedFiles, removeFiles } =
+    useDicomStore();
   const [rawSelectedFileIds, setRawSelectedFileIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -42,9 +36,7 @@ export function DicomStudyTree() {
 
   function handleRemoveAll() {
     if (
-      window.confirm(
-        '移除全部已导入文件？这只会清空当前浏览器会话，不会删除磁盘文件。'
-      )
+      window.confirm('移除全部已导入文件？这只会清空当前浏览器会话，不会删除磁盘文件。')
     ) {
       removeFiles(allFileIds);
       setRawSelectedFileIds(new Set());
@@ -86,10 +78,21 @@ export function DicomStudyTree() {
       </div>
       <p className="muted tree-note">移除只清理当前导入列表，不会删除磁盘文件。</p>
       <div className="study-tree">
-        <details open>
+        {studies.map((study) => (
+          <StudyItem
+            key={study.studyInstanceUID}
+            study={study}
+            activeFileId={activeFileId}
+            selectedFileIds={selectedFileIds}
+            onSelectFile={setActiveFileId}
+            onToggle={handleToggle}
+          />
+        ))}
+
+        <details>
           <summary>
             <span className="tree-summary-row">
-              <span>Imported Files</span>
+              <span>Source Files</span>
               <span className="count">{files.length}</span>
             </span>
           </summary>
@@ -106,17 +109,6 @@ export function DicomStudyTree() {
             ))}
           </ul>
         </details>
-
-        {studies.map((study) => (
-          <StudyItem
-            key={study.studyInstanceUID}
-            study={study}
-            activeFileId={activeFileId}
-            selectedFileIds={selectedFileIds}
-            onSelectFile={setActiveFileId}
-            onToggle={handleToggle}
-          />
-        ))}
       </div>
       {skippedFiles.length > 0 ? (
         <details className="skipped-files">
@@ -255,9 +247,7 @@ function SeriesItem(props: {
             selectedFileIds={selectedFileIds}
             onToggle={onToggle}
           />
-          <span>
-            {series.modality ?? 'Series'} {series.seriesNumber ?? ''}
-          </span>
+          <span>{formatSeriesLabel(series)}</span>
           <span className="count">{series.instances.length}</span>
         </span>
       </summary>
@@ -275,6 +265,17 @@ function SeriesItem(props: {
       </ul>
     </details>
   );
+}
+
+function formatSeriesLabel(series: DicomSeries): string {
+  return [
+    series.modality ?? 'Series',
+    series.seriesNumber !== undefined ? `S${series.seriesNumber}` : undefined,
+    series.protocolName,
+    series.description
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(' / ');
 }
 
 function InstanceItem(props: {

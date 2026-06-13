@@ -66,27 +66,135 @@ function buildMetadata(dataSet: DicomDataSet): DicomMetadata {
   const textDecoder = createDicomTextDecoder(specificCharacterSet);
 
   setIfDefined(metadata, 'specificCharacterSet', specificCharacterSet);
-  setIfDefined(metadata, 'patientName', readTextTag(dataSet, DICOM_TAGS.PATIENT_NAME, textDecoder));
-  setIfDefined(metadata, 'patientId', readTextTag(dataSet, DICOM_TAGS.PATIENT_ID, textDecoder));
-  setIfDefined(metadata, 'patientSex', readTextTag(dataSet, DICOM_TAGS.PATIENT_SEX, textDecoder));
-  setIfDefined(metadata, 'patientAge', readTextTag(dataSet, DICOM_TAGS.PATIENT_AGE, textDecoder));
-  setIfDefined(metadata, 'studyInstanceUID', readAsciiTag(dataSet, DICOM_TAGS.STUDY_INSTANCE_UID));
+  setIfDefined(
+    metadata,
+    'imageType',
+    readStringArray(dataSet, DICOM_TAGS.IMAGE_TYPE, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'manufacturer',
+    readTextTag(dataSet, DICOM_TAGS.MANUFACTURER, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'patientName',
+    readTextTag(dataSet, DICOM_TAGS.PATIENT_NAME, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'patientId',
+    readTextTag(dataSet, DICOM_TAGS.PATIENT_ID, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'patientSex',
+    readTextTag(dataSet, DICOM_TAGS.PATIENT_SEX, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'patientAge',
+    readTextTag(dataSet, DICOM_TAGS.PATIENT_AGE, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'studyInstanceUID',
+    readAsciiTag(dataSet, DICOM_TAGS.STUDY_INSTANCE_UID)
+  );
   setIfDefined(metadata, 'studyDate', readAsciiTag(dataSet, DICOM_TAGS.STUDY_DATE));
   setIfDefined(metadata, 'studyTime', readAsciiTag(dataSet, DICOM_TAGS.STUDY_TIME));
-  setIfDefined(metadata, 'studyDescription', readTextTag(dataSet, DICOM_TAGS.STUDY_DESCRIPTION, textDecoder));
-  setIfDefined(metadata, 'seriesInstanceUID', readAsciiTag(dataSet, DICOM_TAGS.SERIES_INSTANCE_UID));
-  setIfDefined(metadata, 'seriesNumber', readNumber(dataSet, DICOM_TAGS.SERIES_NUMBER, textDecoder));
-  setIfDefined(metadata, 'seriesDescription', readTextTag(dataSet, DICOM_TAGS.SERIES_DESCRIPTION, textDecoder));
+  setIfDefined(
+    metadata,
+    'studyDescription',
+    readTextTag(dataSet, DICOM_TAGS.STUDY_DESCRIPTION, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'manufacturerModelName',
+    readTextTag(dataSet, DICOM_TAGS.MANUFACTURER_MODEL_NAME, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'seriesInstanceUID',
+    readAsciiTag(dataSet, DICOM_TAGS.SERIES_INSTANCE_UID)
+  );
+  setIfDefined(
+    metadata,
+    'seriesNumber',
+    readNumber(dataSet, DICOM_TAGS.SERIES_NUMBER, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'seriesDescription',
+    readTextTag(dataSet, DICOM_TAGS.SERIES_DESCRIPTION, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'protocolName',
+    readTextTag(dataSet, DICOM_TAGS.PROTOCOL_NAME, textDecoder)
+  );
   setIfDefined(metadata, 'modality', readAsciiTag(dataSet, DICOM_TAGS.MODALITY));
-  setIfDefined(metadata, 'sopInstanceUID', readAsciiTag(dataSet, DICOM_TAGS.SOP_INSTANCE_UID));
-  setIfDefined(metadata, 'instanceNumber', readNumber(dataSet, DICOM_TAGS.INSTANCE_NUMBER, textDecoder));
+  setIfDefined(
+    metadata,
+    'sopInstanceUID',
+    readAsciiTag(dataSet, DICOM_TAGS.SOP_INSTANCE_UID)
+  );
+  setIfDefined(
+    metadata,
+    'instanceNumber',
+    readNumber(dataSet, DICOM_TAGS.INSTANCE_NUMBER, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'sliceThickness',
+    readNumber(dataSet, DICOM_TAGS.SLICE_THICKNESS, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'spacingBetweenSlices',
+    readNumber(dataSet, DICOM_TAGS.SPACING_BETWEEN_SLICES, textDecoder)
+  );
   setIfDefined(metadata, 'rows', readNumber(dataSet, DICOM_TAGS.ROWS, textDecoder));
-  setIfDefined(metadata, 'columns', readNumber(dataSet, DICOM_TAGS.COLUMNS, textDecoder));
-  setIfDefined(metadata, 'windowCenter', readNumber(dataSet, DICOM_TAGS.WINDOW_CENTER, textDecoder));
-  setIfDefined(metadata, 'windowWidth', readNumber(dataSet, DICOM_TAGS.WINDOW_WIDTH, textDecoder));
-  setIfDefined(metadata, 'rescaleSlope', readNumber(dataSet, DICOM_TAGS.RESCALE_SLOPE, textDecoder));
-  setIfDefined(metadata, 'rescaleIntercept', readNumber(dataSet, DICOM_TAGS.RESCALE_INTERCEPT, textDecoder));
-  setIfDefined(metadata, 'transferSyntaxUID', readAsciiTag(dataSet, DICOM_TAGS.TRANSFER_SYNTAX_UID));
+  setIfDefined(
+    metadata,
+    'columns',
+    readNumber(dataSet, DICOM_TAGS.COLUMNS, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'pixelSpacing',
+    readNumberPair(dataSet, DICOM_TAGS.PIXEL_SPACING, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'windowCenter',
+    readNumber(dataSet, DICOM_TAGS.WINDOW_CENTER, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'windowWidth',
+    readNumber(dataSet, DICOM_TAGS.WINDOW_WIDTH, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'rescaleSlope',
+    readNumber(dataSet, DICOM_TAGS.RESCALE_SLOPE, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'rescaleIntercept',
+    readNumber(dataSet, DICOM_TAGS.RESCALE_INTERCEPT, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'rescaleType',
+    readTextTag(dataSet, DICOM_TAGS.RESCALE_TYPE, textDecoder)
+  );
+  setIfDefined(
+    metadata,
+    'transferSyntaxUID',
+    readAsciiTag(dataSet, DICOM_TAGS.TRANSFER_SYNTAX_UID)
+  );
 
   return metadata;
 }
@@ -224,6 +332,48 @@ function parseDicomNumber(value: string | undefined): number | undefined {
 
   const parsed = Number(firstValue);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function readNumberPair(
+  dataSet: DicomDataSet,
+  tag: string,
+  textDecoder: DicomTextDecoder
+): [number, number] | undefined {
+  const values = readNumberArray(dataSet, tag, textDecoder);
+  return values.length >= 2 && Number.isFinite(values[0]) && Number.isFinite(values[1])
+    ? [values[0] as number, values[1] as number]
+    : undefined;
+}
+
+function readNumberArray(
+  dataSet: DicomDataSet,
+  tag: string,
+  textDecoder: DicomTextDecoder
+): number[] {
+  return splitDicomValues(readTextTag(dataSet, tag, textDecoder))
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+}
+
+function readStringArray(
+  dataSet: DicomDataSet,
+  tag: string,
+  textDecoder: DicomTextDecoder
+): string[] | undefined {
+  const values = splitDicomValues(readTextTag(dataSet, tag, textDecoder))
+    .map(normalizeDicomText)
+    .filter((value): value is string => value !== undefined);
+
+  return values.length > 0 ? values : undefined;
+}
+
+function splitDicomValues(value: string | undefined): string[] {
+  return (
+    value
+      ?.split('\\')
+      .map((item) => item.trim())
+      .filter(Boolean) ?? []
+  );
 }
 
 function normalizeDicomText(value: string | undefined): string | undefined {

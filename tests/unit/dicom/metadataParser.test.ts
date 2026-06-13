@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { parseDicomMetadataFromBytes } from '@/dicom/metadataParser';
 
 describe('metadataParser', () => {
-  it('decodes GB18030 text tags and numeric values from DICOM bytes', () => {
+  it('decodes GB18030 text tags, numeric values, and extended metadata from DICOM bytes', () => {
     const bytes = createDicomBytes();
     const result = parseDicomMetadataFromBytes(bytes);
 
@@ -12,13 +12,26 @@ describe('metadataParser', () => {
       return;
     }
 
-    expect(result.value.specificCharacterSet).toBe('GB18030');
-    expect(result.value.seriesDescription).toBe('腹窗 cor&sag 5mm');
-    expect(result.value.seriesNumber).toBe(10002);
-    expect(result.value.rows).toBe(828);
-    expect(result.value.columns).toBe(512);
-    expect(result.value.windowCenter).toBe(40);
-    expect(result.value.windowWidth).toBe(350);
+    expect(result.value).toMatchObject({
+      specificCharacterSet: 'GB18030',
+      imageType: ['DERIVED', 'SECONDARY', 'AXIAL', 'HELICAL'],
+      modality: 'CT',
+      manufacturer: 'NMS',
+      manufacturerModelName: 'NeuViz Epoch',
+      protocolName: 'abdomen thin',
+      seriesDescription: '腹窗 cor&sag 5mm',
+      seriesNumber: 10002,
+      rows: 828,
+      columns: 512,
+      windowCenter: 40,
+      windowWidth: 350,
+      sliceThickness: 5,
+      spacingBetweenSlices: 5,
+      pixelSpacing: [0.7001495361, 0.7001495361],
+      rescaleIntercept: -1024,
+      rescaleSlope: 1,
+      rescaleType: 'HU'
+    });
   });
 });
 
@@ -31,18 +44,28 @@ function createDicomBytes(): Uint8Array {
     createElement(0x0002, 0x0000, 'UL', uint32(metaLength)),
     ...metaElements,
     createElement(0x0008, 0x0005, 'CS', ascii('GB18030')),
+    createElement(0x0008, 0x0008, 'CS', ascii('DERIVED\\SECONDARY\\AXIAL\\HELICAL')),
     createElement(0x0008, 0x0060, 'CS', ascii('CT')),
+    createElement(0x0008, 0x0070, 'LO', ascii('NMS')),
     createElement(
       0x0008,
       0x103e,
       'LO',
       bytes(0xb8, 0xb9, 0xb4, 0xb0, ...ascii(' cor&sag 5mm'))
     ),
+    createElement(0x0008, 0x1090, 'LO', ascii('NeuViz Epoch')),
+    createElement(0x0018, 0x0050, 'DS', ascii('5')),
+    createElement(0x0018, 0x0088, 'DS', ascii('5')),
+    createElement(0x0018, 0x1030, 'LO', ascii('abdomen thin')),
     createElement(0x0020, 0x0011, 'IS', ascii('10002')),
     createElement(0x0028, 0x0010, 'US', uint16(828)),
     createElement(0x0028, 0x0011, 'US', uint16(512)),
+    createElement(0x0028, 0x0030, 'DS', ascii('0.7001495361\\0.7001495361')),
     createElement(0x0028, 0x1050, 'DS', ascii('40')),
-    createElement(0x0028, 0x1051, 'DS', ascii('350'))
+    createElement(0x0028, 0x1051, 'DS', ascii('350')),
+    createElement(0x0028, 0x1052, 'DS', ascii('-1024')),
+    createElement(0x0028, 0x1053, 'DS', ascii('1')),
+    createElement(0x0028, 0x1054, 'LO', ascii('HU'))
   ];
 
   return bytes(
