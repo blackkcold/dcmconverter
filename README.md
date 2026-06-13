@@ -1,6 +1,5 @@
 # Local DICOM JPEG Tool
 
-<p align="center">
   <a href="https://blackkcold.github.io/dcmconverter/">
     <img alt="Live Demo" src="https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-1f883d?style=for-the-badge">
   </a>
@@ -10,7 +9,6 @@
   <a href="LICENSE">
     <img alt="License Valid" src="https://img.shields.io/badge/License-Valid-2ea44f?style=for-the-badge">
   </a>
-</p>
 
 > [!TIP]
 > 在线体验 / Live demo: <https://blackkcold.github.io/dcmconverter/>
