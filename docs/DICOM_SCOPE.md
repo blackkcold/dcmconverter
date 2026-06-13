@@ -18,3 +18,14 @@
 ## Tag 映射
 
 所有 tag key 集中在 `src/dicom/metadataMap.ts`，UI 只消费 `DicomMetadata`。
+
+当前会解析并用于导出归类或 JPEG Meta 的核心字段包括：
+
+- PatientName / PatientID / PatientSex / PatientAge
+- StudyDate / StudyTime / StudyDescription / StudyInstanceUID
+- SeriesInstanceUID / SeriesNumber / SeriesDescription / ProtocolName
+- Modality / ImageType / SOPInstanceUID / InstanceNumber
+- Rows / Columns / WindowCenter / WindowWidth
+- SliceThickness / SpacingBetweenSlices / PixelSpacing
+- RescaleIntercept / RescaleSlope / RescaleType
+- Manufacturer / ManufacturerModelName / TransferSyntaxUID

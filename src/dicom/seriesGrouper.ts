@@ -14,14 +14,16 @@ export function groupDicomFiles(
 
   for (const localFile of files) {
     const metadata = metadataByFileId[localFile.id] ?? {};
-    const studyId = metadata.studyInstanceUID ?? `study:${localFile.relativePath}`;
-    const seriesId = metadata.seriesInstanceUID ?? `series:${localFile.relativePath}`;
+    const studyId = getStudyGroupingKey(metadata);
+    const seriesId = getSeriesGroupingKey(metadata);
 
     let study = studies.get(studyId);
     if (!study) {
       study = {
         studyInstanceUID: studyId,
-        ...(metadata.studyDescription ? { description: metadata.studyDescription } : {}),
+        ...(metadata.studyDescription
+          ? { description: metadata.studyDescription }
+          : {}),
         ...(metadata.studyDate ? { date: metadata.studyDate } : {}),
         series: []
       };
@@ -53,9 +55,38 @@ function createSeries(seriesInstanceUID: string, metadata: DicomMetadata): Dicom
       ? { seriesNumber: metadata.seriesNumber }
       : {}),
     ...(metadata.seriesDescription ? { description: metadata.seriesDescription } : {}),
+    ...(metadata.protocolName ? { protocolName: metadata.protocolName } : {}),
     ...(metadata.modality ? { modality: metadata.modality } : {}),
     instances: []
   };
+}
+
+function getStudyGroupingKey(metadata: DicomMetadata): string {
+  if (metadata.studyInstanceUID) {
+    return metadata.studyInstanceUID;
+  }
+
+  return [
+    'study',
+    metadata.studyDate ?? 'unknownDate',
+    metadata.studyTime ?? 'unknownTime',
+    metadata.studyDescription ?? 'unknownStudy',
+    metadata.patientId ?? 'unknownPatient'
+  ].join(':');
+}
+
+function getSeriesGroupingKey(metadata: DicomMetadata): string {
+  if (metadata.seriesInstanceUID) {
+    return metadata.seriesInstanceUID;
+  }
+
+  return [
+    'series',
+    metadata.seriesNumber ?? 'unknownNumber',
+    metadata.modality ?? 'unknownModality',
+    metadata.protocolName ?? 'unknownProtocol',
+    metadata.seriesDescription ?? 'unknownDescription'
+  ].join(':');
 }
 
 function createInstance(fileId: string, metadata: DicomMetadata): DicomInstance {
@@ -80,7 +111,6 @@ function compareSeries(a: DicomSeries, b: DicomSeries): number {
 function compareInstances(a: DicomInstance, b: DicomInstance): number {
   return (
     (a.instanceNumber ?? Number.MAX_SAFE_INTEGER) -
-      (b.instanceNumber ?? Number.MAX_SAFE_INTEGER) ||
-    a.fileId.localeCompare(b.fileId)
+      (b.instanceNumber ?? Number.MAX_SAFE_INTEGER) || a.fileId.localeCompare(b.fileId)
   );
 }

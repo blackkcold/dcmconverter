@@ -70,7 +70,7 @@ describe('exportJobBuilder', () => {
     expect(anonymous.jobs[0]?.outputFileName).not.toContain('PID-1');
   });
 
-  it('creates series folders and directory-local sequence prefixes by default', () => {
+  it('creates legacy series folders and directory-local sequence prefixes when requested', () => {
     const first = localFile('file_a', 'source/a.dcm');
     const second = localFile('file_b', 'source/b.dcm');
     const result = buildExportJobs({
@@ -80,7 +80,8 @@ describe('exportJobBuilder', () => {
       options: {
         ...DEFAULT_EXPORT_OPTIONS,
         scope: 'all',
-        includePersonalInfo: false
+        includePersonalInfo: false,
+        outputLayout: 'series'
       },
       metadataByFileId: {
         [first.id]: {
@@ -106,6 +107,85 @@ describe('exportJobBuilder', () => {
       'Study_20260612_1.2.3.4/S003_CT_9.8.7.6/0001_20260612_CT_S003_I0001_a.jpg',
       'Study_20260612_1.2.3.4/S003_CT_9.8.7.6/0002_20260612_CT_S003_I0002_b.jpg'
     ]);
+  });
+
+  it('uses DICOM smart folders by default and preserves Chinese path segments', () => {
+    const file = localFile('file_a', 'source/a.dcm');
+    const result = buildExportJobs({
+      files: [file],
+      studies: [],
+      activeFileId: file.id,
+      options: {
+        ...DEFAULT_EXPORT_OPTIONS,
+        scope: 'all',
+        includePersonalInfo: false
+      },
+      metadataByFileId: {
+        [file.id]: {
+          studyDate: '20260612',
+          studyInstanceUID: '1.2.3.4',
+          seriesInstanceUID: '9.8.7.6',
+          protocolName: '腹部平扫+薄层',
+          seriesDescription: '腹窗 cor&sag 5mm',
+          seriesNumber: 3,
+          modality: 'CT',
+          instanceNumber: 1
+        }
+      }
+    });
+
+    expect(result.jobs[0]?.outputRelativePath).toBe(
+      'Study_20260612_1.2.3.4/Protocol_腹部平扫+薄层/S003_腹窗_cor&sag_5mm_9.8.7.6/0001_20260612_CT_S003_I0001_a.jpg'
+    );
+  });
+
+  it('can group folders by individual metadata fields', () => {
+    const file = localFile('file_a', 'source/a.dcm');
+    const metadataByFileId = {
+      [file.id]: {
+        studyDate: '20260612',
+        seriesDescription: '腹窗 cor&sag 5mm',
+        protocolName: '腹部平扫+薄层',
+        instanceNumber: 54
+      }
+    };
+    const base = {
+      files: [file],
+      studies: [],
+      activeFileId: file.id,
+      options: {
+        ...DEFAULT_EXPORT_OPTIONS,
+        scope: 'all' as const,
+        outputLayout: 'metadataField' as const,
+        includePersonalInfo: false
+      },
+      metadataByFileId
+    };
+
+    expect(
+      buildExportJobs({
+        ...base,
+        options: { ...base.options, metadataFolderField: 'seriesDescription' }
+      }).jobs[0]?.outputRelativePath
+    ).toBe(
+      'Study_20260612_unknown/SeriesDescription_腹窗_cor&sag_5mm/0001_20260612_unknown_Sunknown_I0054_a.jpg'
+    );
+    expect(
+      buildExportJobs({
+        ...base,
+        options: { ...base.options, metadataFolderField: 'protocolName' }
+      }).jobs[0]?.outputRelativePath
+    ).toBe(
+      'Study_20260612_unknown/Protocol_腹部平扫+薄层/0001_20260612_unknown_Sunknown_I0054_a.jpg'
+    );
+    expect(
+      buildExportJobs({
+        ...base,
+        options: { ...base.options, metadataFolderField: 'instanceNumber' }
+      }).jobs[0]?.outputRelativePath
+    ).toBe(
+      'Study_20260612_unknown/Instance_0054/0001_20260612_unknown_Sunknown_I0054_a.jpg'
+    );
   });
 
   it('can preserve source directories or flatten output', () => {

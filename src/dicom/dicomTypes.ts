@@ -29,7 +29,9 @@ export interface DicomMetadata {
   seriesInstanceUID?: string;
   seriesNumber?: number;
   seriesDescription?: string;
+  protocolName?: string;
   modality?: string;
+  imageType?: string[];
   sopInstanceUID?: string;
   instanceNumber?: number;
   rows?: number;
@@ -38,6 +40,12 @@ export interface DicomMetadata {
   windowWidth?: number;
   rescaleSlope?: number;
   rescaleIntercept?: number;
+  rescaleType?: string;
+  sliceThickness?: number;
+  spacingBetweenSlices?: number;
+  pixelSpacing?: [number, number];
+  manufacturer?: string;
+  manufacturerModelName?: string;
   transferSyntaxUID?: string;
 }
 
@@ -52,6 +60,7 @@ export interface DicomSeries {
   seriesInstanceUID: string;
   seriesNumber?: number;
   description?: string;
+  protocolName?: string;
   modality?: string;
   instances: DicomInstance[];
 }
