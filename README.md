@@ -2,6 +2,11 @@
 
 本项目是一个本地优先的浏览器端 DICOM 查看与 JPEG 导出工具。文件只在浏览器内处理，不上传服务器；导出的 JPEG 是非诊断用途的当前渲染结果。
 
+## 在线访问
+
+- 在线体验：<https://blackkcold.github.io/dcmconverter/>
+- 发布页：<https://github.com/blackkcold/dcmconverter/releases>
+
 ## 功能范围
 
 - 选择单个或多个 `.dcm / .dicom / .ima` 文件。
