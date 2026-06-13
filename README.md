@@ -1,16 +1,14 @@
 # Local DICOM JPEG Tool
 
-<p align="center">
-  <a href="https://blackkcold.github.io/dcmconverter/">
-    <img alt="Live Demo" src="https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-1f883d?style=for-the-badge">
-  </a>
-  <a href="https://github.com/blackkcold/dcmconverter/releases">
-    <img alt="Releases" src="https://img.shields.io/github/v/release/blackkcold/dcmconverter?style=for-the-badge&label=Releases&color=0b7285">
-  </a>
-  <a href="LICENSE">
-    <img alt="License Valid" src="https://img.shields.io/badge/License-Valid-2ea44f?style=for-the-badge">
-  </a>
-</p>
+<a href="https://blackkcold.github.io/dcmconverter/">
+  <img alt="Live Demo" src="https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-1f883d?style=for-the-badge">
+</a>
+<a href="https://github.com/blackkcold/dcmconverter/releases">
+  <img alt="Releases" src="https://img.shields.io/github/v/release/blackkcold/dcmconverter?style=for-the-badge&label=Releases&color=0b7285">
+</a>
+<a href="LICENSE">
+  <img alt="License Valid" src="https://img.shields.io/badge/License-Valid-2ea44f?style=for-the-badge">
+</a>
 
 > [!TIP]
 > 在线体验 / Live demo: <https://blackkcold.github.io/dcmconverter/>
