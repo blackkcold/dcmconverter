@@ -137,7 +137,6 @@ export function DicomViewport() {
 
     if (!activeFile) {
       controllerRef.current = undefined;
-      host.replaceChildren();
       queueMicrotask(() =>
         setStatus(createLocalizedText('viewer.waitingImport'))
       );
