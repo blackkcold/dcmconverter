@@ -231,7 +231,14 @@ const zh = {
 
   'locale.switcherLabel': '语言',
   'locale.chinese': '中文',
-  'locale.english': 'English'
+  'locale.english': 'English',
+
+  'tabs.tree': '文件',
+  'tabs.viewer': '影像',
+  'tabs.export': '导出',
+  'tabs.navLabel': '面板切换',
+  'tabs.openPanel': '打开文件面板',
+  'tabs.closePanel': '关闭文件面板'
 } as const;
 
 export type TranslationKey = keyof typeof zh;
@@ -469,7 +476,14 @@ const en = {
 
   'locale.switcherLabel': 'Language',
   'locale.chinese': 'Chinese',
-  'locale.english': 'English'
+  'locale.english': 'English',
+
+  'tabs.tree': 'Files',
+  'tabs.viewer': 'Viewer',
+  'tabs.export': 'Export',
+  'tabs.navLabel': 'Panel tabs',
+  'tabs.openPanel': 'Open file panel',
+  'tabs.closePanel': 'Close file panel'
 } as const;
 
 export const MESSAGES = {
