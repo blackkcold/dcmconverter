@@ -110,7 +110,11 @@ export function DicomViewport() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isStackNavigationKey(event.key) || shouldIgnoreKeyboardTarget(event.target)) {
+      if (
+        document.body.hasAttribute('data-panel-open') ||
+        !isStackNavigationKey(event.key) ||
+        shouldIgnoreKeyboardTarget(event.target)
+      ) {
         return;
       }
 

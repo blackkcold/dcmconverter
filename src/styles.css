@@ -425,7 +425,95 @@ button:disabled {
   font-size: 0.9rem;
 }
 
-@media (max-width: 1100px) {
+/* ── Responsive 响应式 ── */
+
+/* Shared responsive components (hidden on desktop by default) */
+.panel-toggle-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  font-size: 1.15rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.panel-toggle-btn:hover {
+  border-color: #64748b;
+  background: #f8fafc;
+}
+
+.panel-overlay {
+  display: none;
+}
+.panel-overlay.is-open {
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  z-index: 99;
+}
+
+.bottom-tab-bar {
+  display: none;
+}
+
+.bottom-tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0.35rem 0.25rem;
+  min-height: unset;
+  min-width: unset;
+}
+.bottom-tab-btn:hover {
+  background: #f1f5f9;
+}
+.bottom-tab-btn--active {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.bottom-tab-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.bottom-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.65rem;
+  padding: 0 0.25rem;
+  margin-left: 0.25rem;
+  line-height: 1;
+}
+.bottom-tab-badge:empty {
+  display: none;
+}
+
+/* ── Tablet: 768px – 1024px ── */
+@media (max-width: 1024px) {
   .app-header {
     align-items: flex-start;
     flex-direction: column;
@@ -436,16 +524,164 @@ button:disabled {
     align-items: flex-start;
   }
 
+  .panel-toggle-btn {
+    display: inline-flex;
+  }
+
+  /* Two-column grid: viewer + right panel */
   .workspace-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr minmax(280px, 340px);
     overflow: auto;
   }
 
+  /* Left panel becomes fixed overlay drawer */
   .left-panel {
-    max-height: min(60vh, 520px);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    width: min(85vw, 380px);
+    height: 100%;
+    height: 100dvh;
+    display: none;
+    box-shadow: 4px 0 16px rgba(15, 23, 42, 0.15);
+  }
+  .left-panel.is-open {
+    display: flex;
+  }
+}
+
+/* ── Mobile: below 768px ── */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0.55rem 0.8rem;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+  }
+  .app-header h1 {
+    font-size: 1.05rem;
+    white-space: nowrap;
+  }
+  .app-header p {
+    display: none;
   }
 
+  .header-actions {
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .panel-toggle-btn {
+    display: none; /* bottom tab bar handles switching */
+  }
+
+  .locale-switcher {
+    font-size: 0.8rem;
+  }
+  .locale-switcher select {
+    min-width: 4.5rem;
+    font-size: 0.8rem;
+  }
+
+  .header-stats span,
+  .count {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.4rem;
+  }
+
+  /* Single-column workspace; panels overlay on viewer */
+  .workspace-grid {
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Left/right panels: absolute full-screen overlay */
+  .left-panel,
+  .right-panel {
+    position: absolute;
+    inset: 0;
+    z-index: 90;
+    background: #f8fafc;
+    display: none;
+    overflow: auto;
+    padding: 0.75rem;
+  }
+  .left-panel {
+    width: 100%;
+    height: 100%;
+    box-shadow: none;
+  }
+  .left-panel.is-visible,
+  .right-panel.is-visible {
+    display: flex;
+  }
+
+  /* Viewer always mounted underneath */
   .viewer-panel {
-    min-height: 420px;
+    display: flex;
+    height: 100%;
+    padding: 0.4rem;
+    gap: 0.4rem;
+  }
+
+  /* Toolbar compact */
+  .viewer-toolbar {
+    padding: 0.35rem 0.45rem;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+  }
+  .viewer-toolbar button {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.5rem;
+  }
+  .toolbar-hint {
+    display: none;
+  }
+
+  /* Export panel form grids → single column */
+  .patient-override-grid {
+    grid-template-columns: 1fr;
+  }
+  .template-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Status bar hidden */
+  .status-bar {
+    display: none;
+  }
+
+  /* Bottom tab bar */
+  .bottom-tab-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3.25rem;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    z-index: 100;
+    justify-content: space-around;
+    align-items: stretch;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* iOS prevent zoom on text inputs */
+  input[type="text"],
+  input[type="number"],
+  select {
+    font-size: 16px;
+  }
+
+  /* Safe area for viewport overlay text */
+  .viewport-overlay {
+    padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
   }
 }
