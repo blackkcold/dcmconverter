@@ -9,6 +9,7 @@
 | `DICOM_PARSE_FAILED` | metadata 解析失败。<br>Metadata parsing failed. |
 | `DICOM_UNSUPPORTED_TRANSFER_SYNTAX` | Transfer Syntax 暂不支持。<br>The Transfer Syntax is not supported yet. |
 | `DICOM_DECODE_FAILED` | DICOM 解码或注册失败。<br>DICOM decoding or registration failed. |
+| `DICOM_REGISTRATION_FAILED` | Cornerstone 文件管理器注册失败。<br>Cornerstone file manager registration failed. |
 | `VIEWPORT_INIT_FAILED` | Cornerstone 初始化失败。<br>Cornerstone initialization failed. |
 | `VIEWPORT_RENDER_FAILED` | viewport 渲染失败。<br>The viewport failed to render. |
 | `JPEG_EXPORT_FAILED` | JPEG 编码失败。<br>JPEG encoding failed. |

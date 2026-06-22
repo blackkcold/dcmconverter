@@ -1,6 +1,7 @@
 import type { ChangeEvent, DragEvent, InputHTMLAttributes } from 'react';
 import { useCallback, useRef, useState } from 'react';
 
+import type { DicomMetadata } from '@/dicom/dicomTypes';
 import { ingestFiles } from '@/dicom/fileIngest';
 import { parseDicomMetadata } from '@/dicom/metadataParser';
 import { useLocaleStore, useTranslator } from '@/i18n';
@@ -129,7 +130,7 @@ export function FileImportPanel() {
   const [busy, setBusy] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const locale = useLocaleStore((state) => state.locale);
-  const { addFiles, setMetadata } = useDicomStore();
+  const { addFiles, batchSetMetadata } = useDicomStore();
   const t = useTranslator();
 
   const processFiles = useCallback(
@@ -141,19 +142,23 @@ export function FileImportPanel() {
         const result = ingestFiles(fileList, locale);
         addFiles(result.files, result.skippedFiles);
 
-        await Promise.all(
+        const results = await Promise.all(
           result.files.map(async (localFile) => {
             const metadataResult = await parseDicomMetadata(localFile.file, locale);
-            if (metadataResult.ok) {
-              setMetadata(localFile.id, metadataResult.value);
-            }
+            return metadataResult.ok
+              ? [localFile.id, metadataResult.value] as const
+              : null;
           })
         );
+        const metadataEntries = results.filter((r): r is readonly [string, DicomMetadata] => r !== null);
+        if (metadataEntries.length > 0) {
+          batchSetMetadata(metadataEntries);
+        }
       } finally {
         setBusy(false);
       }
     },
-    [locale, addFiles, setMetadata]
+    [locale, addFiles, batchSetMetadata]
   );
 
   async function handleChange(event: ChangeEvent<HTMLInputElement>) {

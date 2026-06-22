@@ -11,6 +11,7 @@ type RenderingEngineConstructor = new (id: string) => RenderingEngineLike;
 
 interface RenderingEngineLike {
   enableElement(input: unknown): void;
+  disableElement(viewportId: string): void;
   getViewport(viewportId: string): unknown;
   resize?(immediate?: boolean, keepCamera?: boolean): void;
   destroy(): void;
@@ -41,24 +42,32 @@ export interface ActiveViewportController {
   dispose(): void;
 }
 
-let viewportSequence = 0;
+const ENGINE_ID = 'dicom-viewer-engine';
+const VIEWPORT_ID = 'main-viewport';
+
+let sharedEngine: RenderingEngineLike | undefined;
+let sharedViewportId: string | undefined;
+let sharedElement: HTMLDivElement | undefined;
 
 export async function renderDicomFileToElement(
   file: File,
   element: HTMLDivElement,
-  locale: Locale = getCurrentLocale()
+  locale: Locale = getCurrentLocale(),
+  onProgress?: (step: string) => void
 ): Promise<Result<ActiveViewportController, AppError>> {
   const initResult = await initializeCornerstone(locale);
   if (!initResult.ok) {
     return initResult;
   }
 
+  onProgress?.('viewer.registeringFile');
   const imageIdResult = await addFileToCornerstoneFileManager(file, locale);
   if (!imageIdResult.ok) {
     return imageIdResult;
   }
 
   try {
+    onProgress?.('viewer.creatingViewport');
     const core = (await import('@cornerstonejs/core')) as unknown as CoreModuleLike;
     const RenderingEngine = core.RenderingEngine;
 
@@ -72,22 +81,36 @@ export async function renderDicomFileToElement(
       );
     }
 
-    const renderingEngineId = `local-dicom-rendering-engine-${viewportSequence++}`;
-    const viewportId = `local-dicom-viewport-${viewportSequence}`;
-    const renderingEngine = new RenderingEngine(renderingEngineId);
     const viewportType = core.Enums?.ViewportType?.STACK ?? 'stack';
 
-    renderingEngine.enableElement({
-      viewportId,
-      type: viewportType,
-      element,
-      defaultOptions: {
-        background: [0, 0, 0]
-      }
-    });
+    if (!sharedEngine) {
+      sharedEngine = new RenderingEngine(ENGINE_ID);
+      sharedViewportId = VIEWPORT_ID;
+    }
 
-    const viewport = renderingEngine.getViewport(viewportId) as StackViewportLike;
+    const viewportId = sharedViewportId!;
+    const existingViewport = sharedEngine.getViewport(viewportId);
+
+    if (!existingViewport || sharedElement !== element) {
+      if (existingViewport) {
+        sharedEngine.disableElement(viewportId);
+      }
+
+      sharedEngine.enableElement({
+        viewportId,
+        type: viewportType,
+        element,
+        defaultOptions: {
+          background: [0, 0, 0]
+        }
+      });
+      sharedElement = element;
+    }
+
+    const viewport = sharedEngine.getViewport(viewportId) as StackViewportLike;
+    onProgress?.('viewer.decodingImage');
     await viewport.setStack([imageIdResult.value], 0);
+    onProgress?.('viewer.renderingImage');
     viewport.render();
 
     return ok({
@@ -101,8 +124,10 @@ export async function renderDicomFileToElement(
         );
         viewport.render();
       },
-      resize: () => renderingEngine.resize?.(true, true),
-      dispose: () => renderingEngine.destroy()
+      resize: () => sharedEngine?.resize?.(true, true),
+      dispose: () => {
+        // Engine is reused across file switches; only destroy on app teardown.
+      }
     });
   } catch (cause) {
     log({

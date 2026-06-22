@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="80" fill="#1f2937"/>
+  <g fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round">
+    <!-- Medical cross -->
+    <line x1="256" y1="128" x2="256" y2="384"/>
+    <line x1="128" y1="256" x2="384" y2="256"/>
+  </g>
+  <!-- "DICOM" label -->
+  <text x="256" y="430" text-anchor="middle" fill="#94a3b8" font-size="64" font-family="system-ui, sans-serif" font-weight="600">DICOM</text>
+</svg>

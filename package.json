@@ -1,6 +1,6 @@
 {
   "name": "local-dicom-jpeg-tool",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "private": true,
   "license": "MIT",
   "description": "Local-first browser tool for viewing DICOM files and exporting non-diagnostic JPEG images with burned-in key metadata.",
@@ -21,6 +21,7 @@
   "dependencies": {
     "@cornerstonejs/core": "^5.0.8",
     "@cornerstonejs/dicom-image-loader": "^5.0.8",
+    "@cornerstonejs/metadata": "^5.0.8",
     "@cornerstonejs/tools": "^5.0.8",
     "dicom-parser": "^1.8.21",
     "fflate": "^0.8.3",
