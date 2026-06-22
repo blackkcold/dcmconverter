@@ -41,9 +41,19 @@ export function DicomViewport() {
   const { windowCenter, windowWidth, zoom } = useViewerStore();
   const locale = useLocaleStore((state) => state.locale);
   const t = useTranslator();
+  const PROGRESS_STEPS: Record<string, number> = {
+    'viewer.waitingImport': 0,
+    'viewer.initializing': 10,
+    'viewer.registeringFile': 30,
+    'viewer.creatingViewport': 50,
+    'viewer.decodingImage': 70,
+    'viewer.renderingImage': 90,
+    'viewer.loadedFile': 100
+  };
   const [status, setStatus] = useState<LocalizedText | string>(
     createLocalizedText('viewer.waitingImport')
   );
+  const [currentStep, setCurrentStep] = useState('viewer.waitingImport');
   const [stageSize, setStageSize] = useState<ViewportSize>({
     width: 0,
     height: 0
@@ -150,12 +160,16 @@ export function DicomViewport() {
     let disposed = false;
     let cleanup: (() => void) | undefined;
     controllerRef.current = undefined;
-    host.replaceChildren();
     queueMicrotask(() =>
       setStatus(createLocalizedText('viewer.initializing'))
     );
 
-    renderDicomFileToElement(activeFile.file, host, locale).then((result) => {
+    renderDicomFileToElement(activeFile.file, host, locale, (step) => {
+      queueMicrotask(() => {
+        setCurrentStep(step);
+        setStatus(createLocalizedText(step as Parameters<typeof createLocalizedText>[0]));
+      });
+    }).then((result) => {
       if (disposed) {
         if (result.ok) {
           result.value.dispose();
@@ -176,7 +190,16 @@ export function DicomViewport() {
         return;
       }
 
-      setStatus(result.error.message);
+      const errorMessage = result.error.message;
+      const isNetworkError = /network|offline|fetch|load.*engine|cornerstone.*init/i.test(errorMessage);
+      const isTimeout = /timed out/i.test(errorMessage);
+      setStatus(
+        isNetworkError
+          ? createLocalizedText('error.offlineEngineRequired')
+          : isTimeout
+            ? `${errorMessage}\n请检查 DevTools Console 获取详细错误。`
+            : errorMessage
+      );
     });
 
     return () => {
@@ -199,6 +222,12 @@ export function DicomViewport() {
         </div>
         <div className="viewport-overlay" aria-live="polite">
           <span>{formatLocalizedText(locale, status)}</span>
+          <div className="viewport-progress-track">
+            <div
+              className="viewport-progress-fill"
+              style={{ width: `${PROGRESS_STEPS[currentStep] ?? 0}%` }}
+            />
+          </div>
           <span>
             WC {normalized.center} / WW {normalized.width}
           </span>

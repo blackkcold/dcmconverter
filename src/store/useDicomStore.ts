@@ -16,6 +16,7 @@ interface DicomStore {
   skippedFiles: SkippedFile[];
   addFiles(files: LocalDicomFile[], skippedFiles: SkippedFile[]): void;
   setMetadata(fileId: string, metadata: DicomMetadata): void;
+  batchSetMetadata(entries: (readonly [string, DicomMetadata])[]): void;
   setActiveFileId(fileId: string): void;
   removeFiles(fileIds: readonly string[]): void;
   clear(): void;
@@ -50,6 +51,18 @@ export const useDicomStore = create<DicomStore>((set) => ({
         studies: groupDicomFiles(state.files, metadataByFileId)
       };
     }),
+  batchSetMetadata: (entries) =>
+    set((state) => {
+      if (entries.length === 0) return state;
+      const metadataByFileId = { ...state.metadataByFileId };
+      for (const [fileId, metadata] of entries) {
+        metadataByFileId[fileId] = metadata;
+      }
+      return {
+        metadataByFileId,
+        studies: groupDicomFiles(state.files, metadataByFileId)
+      };
+    }),
   setActiveFileId: (fileId) => set({ activeFileId: fileId }),
   removeFiles: (fileIds) =>
     set((state) => {
@@ -78,23 +91,26 @@ export const useDicomStore = create<DicomStore>((set) => ({
         studies: groupDicomFiles(files, metadataByFileId)
       };
     }),
-  clear: () =>
+  clear: () => {
     set({
       files: [],
       metadataByFileId: {},
       studies: [],
       activeFileId: undefined,
       skippedFiles: []
-    })
+    });
+  }
 }));
 
 export function useActiveDicomFile(): LocalDicomFile | undefined {
-  const { files, activeFileId } = useDicomStore();
+  const files = useDicomStore((state) => state.files);
+  const activeFileId = useDicomStore((state) => state.activeFileId);
   return files.find((file) => file.id === activeFileId);
 }
 
 export function useActiveDicomMetadata(): DicomMetadata | undefined {
-  const { activeFileId, metadataByFileId } = useDicomStore();
+  const activeFileId = useDicomStore((state) => state.activeFileId);
+  const metadataByFileId = useDicomStore((state) => state.metadataByFileId);
   return activeFileId ? metadataByFileId[activeFileId] : undefined;
 }
 

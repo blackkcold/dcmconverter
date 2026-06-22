@@ -5,10 +5,15 @@ export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? '/',
   plugins: [react()],
   resolve: {
-    tsconfigPaths: true
+    tsconfigPaths: true,
+    dedupe: ['comlink']
   },
   worker: {
     format: 'es'
+  },
+  optimizeDeps: {
+    include: ['comlink'],
+    exclude: []
   },
   build: {
     target: 'es2022',
