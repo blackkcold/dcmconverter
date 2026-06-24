@@ -1,6 +1,6 @@
 {
   "name": "local-dicom-jpeg-tool",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "license": "MIT",
   "description": "Local-first browser tool for viewing DICOM files and exporting non-diagnostic JPEG images with burned-in key metadata.",

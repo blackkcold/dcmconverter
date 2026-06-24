@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Fixed
+
+### Changed
+
+## [v0.5.1] - 2026-06-24
+
+### Added
+
 - Add E2E regression test for mobile panel state persistence after shell re-render
 
 ### Fixed
