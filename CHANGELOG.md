@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Fixed
+
+### Changed
+
+## [v0.6.0] - 2026-06-24
+
+### Added
+
 - Add privacy-safe PWA app shell support with manual update prompts and offline access to build assets only.
 
 ### Fixed
