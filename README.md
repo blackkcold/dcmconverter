@@ -41,6 +41,7 @@ This project is a local-first browser tool for viewing DICOM files and exporting
 | 批量导出 / Batch export | 可导出当前图像、当前序列或全部导入文件。 |
 | 文件写入 / File output | Chrome / Edge 可直接写入目标文件夹，并支持 manifest 续传。 |
 | 兼容回退 / Fallback | 不支持文件夹写入的浏览器会退回 ZIP 下载。 |
+| 可安装应用壳 / Installable app shell | 支持 PWA 安装与离线打开应用壳；仅缓存构建资源，不缓存用户 DICOM 文件。 |
 | 隐私边界 / Privacy boundary | 默认本地处理，用户必须显式选择文件或目录授权。 |
 
 ## 主要特性 / Features
@@ -61,6 +62,7 @@ This project is a local-first browser tool for viewing DICOM files and exporting
 ### 隐私 / Privacy
 - 默认可烧录个人医疗信息；导出面板会明确提示当前模式。
 - 不支持静默扫描本地磁盘路径，必须由用户通过文件/目录选择器授权。
+- PWA 仅预缓存应用壳和构建产物；用户选择的 DICOM 文件、File/blob URL 和导出结果不会写入 Service Worker 缓存。
 - JPEG 底部固定显示 `Non-diagnostic JPEG · Exported from local DICOM tool`。
 
 > [!NOTE]

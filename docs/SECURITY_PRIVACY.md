@@ -19,3 +19,11 @@ The export package name is sanitized for invalid characters; JPEG filename templ
 
 V1 不自动识别或清除像素内烧录的患者信息。用户导出前需要确认图像内容。<br>
 V1 does not automatically detect or remove burned-in patient information. Users must confirm the image content before exporting.
+
+## PWA 缓存边界 / PWA Cache Boundary
+
+PWA Service Worker 只预缓存构建期应用壳资源，包括 HTML、JS、CSS、图标、manifest、Cornerstone worker 和 WASM 解码器产物。用户通过文件或目录选择器授权的 DICOM 文件、File 对象、blob URL、file: URL、导出 JPEG/ZIP 和 File System Access handle 不会写入 Cache Storage、IndexedDB、localStorage 或 sessionStorage。<br>
+The PWA service worker only precaches build-time app-shell assets, including HTML, JS, CSS, icons, the manifest, Cornerstone workers, and WASM decoder build outputs. User-authorized DICOM files, File objects, blob URLs, file: URLs, exported JPEG/ZIP data, and File System Access handles are not written to Cache Storage, IndexedDB, localStorage, or sessionStorage.
+
+Service Worker 更新采用提示模式。新版本可用时必须由用户确认后才激活；应用不会因后台更新自动刷新并丢失当前内存态。<br>
+Service worker updates use prompt mode. A new version is activated only after user confirmation; the app does not automatically reload on background updates and lose current in-memory state.
