@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { ExportPanel } from '@/components/export/ExportPanel';
 import { JobProgressPanel } from '@/components/export/JobProgressPanel';
@@ -11,46 +11,35 @@ import { ViewerToolbar } from '@/components/viewer/ViewerToolbar';
 import { useTranslator } from '@/i18n';
 import { useDicomStore } from '@/store/useDicomStore';
 
+type WorkspaceTab = 'tree' | 'viewer' | 'right';
+
 export function AppShell() {
   const { files, skippedFiles, studies } = useDicomStore();
   const t = useTranslator();
 
   const [leftPanelOpen, setLeftPanelOpen] = useState(false);
-  const activeTabRef = useRef<'tree' | 'viewer' | 'right'>('viewer');
+  const [activeMobileTab, setActiveMobileTab] = useState<WorkspaceTab>('viewer');
+  const isDrawerLayout = useMediaQuery('(max-width: 1024px)');
+  const isMobileLayout = useMediaQuery('(max-width: 768px)');
+  const tabletDrawerOpen = leftPanelOpen && isDrawerLayout && !isMobileLayout;
+  const overlayPanelOpen = tabletDrawerOpen || (isMobileLayout && activeMobileTab !== 'viewer');
 
   // Keyboard guard: suppress stack navigation when panel overlay is open
   useEffect(() => {
-    if (leftPanelOpen) {
+    if (overlayPanelOpen) {
       document.body.setAttribute('data-panel-open', '');
     } else {
       document.body.removeAttribute('data-panel-open');
     }
-  }, [leftPanelOpen]);
+  }, [overlayPanelOpen]);
 
-  const handleTabClick = useCallback((tab: 'tree' | 'viewer' | 'right') => {
-    if (tab === activeTabRef.current) return;
-    activeTabRef.current = tab;
-
-    const leftPanel = document.querySelector<HTMLElement>('.left-panel');
-    const rightPanel = document.querySelector<HTMLElement>('.right-panel');
-    const tabBtns = document.querySelectorAll<HTMLElement>('.bottom-tab-btn');
-
-    leftPanel?.classList.remove('is-visible');
-    rightPanel?.classList.remove('is-visible');
-    tabBtns.forEach((b) => b.classList.remove('bottom-tab-btn--active'));
-
-    if (tab === 'tree') {
-      leftPanel?.classList.add('is-visible');
-      tabBtns[0]?.classList.add('bottom-tab-btn--active');
-    } else if (tab === 'right') {
-      rightPanel?.classList.add('is-visible');
-      tabBtns[2]?.classList.add('bottom-tab-btn--active');
-    } else {
-      tabBtns[1]?.classList.add('bottom-tab-btn--active');
-    }
+  const handleTabClick = useCallback((tab: WorkspaceTab) => {
+    setActiveMobileTab(tab);
+    setLeftPanelOpen(false);
   }, []);
 
   const handleToggleLeftPanel = useCallback(() => {
+    setActiveMobileTab('viewer');
     setLeftPanelOpen((prev) => !prev);
   }, []);
 
@@ -62,9 +51,9 @@ export function AppShell() {
             type="button"
             className="panel-toggle-btn"
             onClick={handleToggleLeftPanel}
-            aria-label={leftPanelOpen ? t('tabs.closePanel') : t('tabs.openPanel')}
+            aria-label={tabletDrawerOpen ? t('tabs.closePanel') : t('tabs.openPanel')}
           >
-            {leftPanelOpen ? '\u2715' : '\u2630'}
+            {tabletDrawerOpen ? '\u2715' : '\u2630'}
           </button>
           <div>
             <h1>{t('app.title')}</h1>
@@ -82,7 +71,13 @@ export function AppShell() {
       </header>
 
       <section className="workspace-grid">
-        <aside className={`left-panel${leftPanelOpen ? ' is-open' : ''}`} aria-label={t('tree.heading')}>
+        <aside
+          className={getPanelClassName('left-panel', {
+            isOpen: tabletDrawerOpen,
+            isVisible: isMobileLayout && activeMobileTab === 'tree'
+          })}
+          aria-label={t('tree.heading')}
+        >
           <FileImportPanel />
           <DicomStudyTree />
         </aside>
@@ -92,14 +87,19 @@ export function AppShell() {
           <DicomViewport />
         </section>
 
-        <aside className="right-panel" aria-label={`${t('metadata.heading')} ${t('export.heading')}`}>
+        <aside
+          className={getPanelClassName('right-panel', {
+            isVisible: isMobileLayout && activeMobileTab === 'right'
+          })}
+          aria-label={`${t('metadata.heading')} ${t('export.heading')}`}
+        >
           <MetadataPanel />
           <ExportPanel />
           <JobProgressPanel />
         </aside>
 
         <div
-          className={`panel-overlay${leftPanelOpen ? ' is-open' : ''}`}
+          className={`panel-overlay${tabletDrawerOpen ? ' is-open' : ''}`}
           onClick={() => setLeftPanelOpen(false)}
           aria-hidden="true"
         />
@@ -112,7 +112,8 @@ export function AppShell() {
       <nav className="bottom-tab-bar" aria-label={t('tabs.navLabel')}>
         <button
           type="button"
-          className="bottom-tab-btn"
+          className={getBottomTabClassName('tree', activeMobileTab)}
+          aria-pressed={activeMobileTab === 'tree'}
           onClick={() => handleTabClick('tree')}
         >
           <span className="bottom-tab-icon">{'\u2630'}</span>
@@ -123,7 +124,8 @@ export function AppShell() {
         </button>
         <button
           type="button"
-          className="bottom-tab-btn bottom-tab-btn--active"
+          className={getBottomTabClassName('viewer', activeMobileTab)}
+          aria-pressed={activeMobileTab === 'viewer'}
           onClick={() => handleTabClick('viewer')}
         >
           <span className="bottom-tab-icon">{'\u25C9'}</span>
@@ -131,7 +133,8 @@ export function AppShell() {
         </button>
         <button
           type="button"
-          className="bottom-tab-btn"
+          className={getBottomTabClassName('right', activeMobileTab)}
+          aria-pressed={activeMobileTab === 'right'}
           onClick={() => handleTabClick('right')}
         >
           <span className="bottom-tab-icon">{'\u21E7'}</span>
@@ -140,4 +143,47 @@ export function AppShell() {
       </nav>
     </main>
   );
+}
+
+function getBottomTabClassName(tab: WorkspaceTab, activeTab: WorkspaceTab): string {
+  return `bottom-tab-btn${tab === activeTab ? ' bottom-tab-btn--active' : ''}`;
+}
+
+function getPanelClassName(
+  baseClassName: 'left-panel' | 'right-panel',
+  options: { isOpen?: boolean; isVisible?: boolean }
+): string {
+  return [
+    baseClassName,
+    options.isOpen ? 'is-open' : '',
+    options.isVisible ? 'is-visible' : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
+    }
+
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia(query);
+    const updateMatches = () => setMatches(mediaQuery.matches);
+
+    updateMatches();
+    mediaQuery.addEventListener('change', updateMatches);
+
+    return () => mediaQuery.removeEventListener('change', updateMatches);
+  }, [query]);
+
+  return matches;
 }

@@ -1,6 +1,8 @@
 :root {
   color: #1f2937;
   background: #f5f7fb;
+  --mobile-bottom-tab-height: 3.25rem;
+  --mobile-bottom-tab-space: calc(var(--mobile-bottom-tab-height) + env(safe-area-inset-bottom, 0px));
   font-family:
     Inter,
     ui-sans-serif,
@@ -625,7 +627,7 @@ button:disabled {
     background: #f8fafc;
     display: none;
     overflow: auto;
-    padding: 0.75rem;
+    padding: 0.75rem 0.75rem calc(0.75rem + var(--mobile-bottom-tab-space));
   }
   .left-panel {
     width: 100%;
@@ -641,7 +643,7 @@ button:disabled {
   .viewer-panel {
     display: flex;
     height: 100%;
-    padding: 0.4rem;
+    padding: 0.4rem 0.4rem calc(0.4rem + var(--mobile-bottom-tab-space));
     gap: 0.4rem;
   }
 
@@ -680,7 +682,7 @@ button:disabled {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 3.25rem;
+    height: var(--mobile-bottom-tab-space);
     background: #ffffff;
     border-top: 1px solid #e2e8f0;
     z-index: 100;

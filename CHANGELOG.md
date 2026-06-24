@@ -9,9 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-### Changed
+- Add E2E regression test for mobile panel state persistence after shell re-render
 
 ### Fixed
+
+- Mobile panel tab switching no longer resets on React re-render: replaced imperative DOM classList manipulation with React state (`activeMobileTab`)
+- Bottom tab bar no longer overlaps mobile panel content: added safe-area-aware bottom padding to viewer, left, and right panels
+- Keyboard navigation guard (`data-panel-open`) now correctly covers all overlay states (tablet drawer + mobile tree/export panels)
+
+### Changed
+
+- Migrated mobile/tablet panel visibility management from `querySelector/classList` to React state + `useMediaQuery`
 
 ## [v0.5.0] - 2026-06-22
 
