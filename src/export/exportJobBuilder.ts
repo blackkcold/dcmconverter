@@ -80,7 +80,6 @@ export function buildExportJobs(input: BuildExportJobsInput): {
           outputDirectory,
           outputFileName
         ),
-        sourceRelativePath: file.relativePath,
         retryCount: 0,
         metadataHash,
         optionsHash
@@ -113,7 +112,8 @@ export function hashExportOptions(options: ExportOptions): string {
     includePersonalInfo: options.includePersonalInfo,
     patientOverrideEnabled: options.patientOverrideEnabled,
     patientOverride: options.patientOverride,
-    includeJpegMetadata: options.includeJpegMetadata,
+    includeJpegDescription: options.includeJpegDescription,
+    includeJpegExtendedMetadata: options.includeJpegExtendedMetadata,
     overlayPosition: options.overlayPosition,
     useCurrentWindowLevel: options.useCurrentWindowLevel,
     outputLayout: options.outputLayout,

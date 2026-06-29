@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createExifApp1Segment,
   createJpegMetadataPayload,
   injectJpegExifMetadata
 } from '@/export/jpegMetadata';
@@ -32,7 +33,7 @@ describe('jpegMetadata', () => {
         manufacturerModelName: 'NeuViz Epoch'
       }
     });
-    const comment = JSON.parse(payload.userComment) as {
+    const comment = JSON.parse(payload.userComment!) as {
       schema: string;
       source: { protocolName: string };
       rendering: { burnedInAnnotation: boolean };
@@ -43,13 +44,23 @@ describe('jpegMetadata', () => {
     expect(payload.imageDescription).toContain('WC/WW=40/350');
     expect(payload.imageDescription).toContain('Pixel Spacing=0.70015x0.70015');
     expect(payload.imageDescription).toContain('Slice Thickness=5mm');
+    expect(payload.imageDescription).toContain('OverlayBurnedIn=YES');
     expect(comment.schema).toBe('dicom-jpeg-meta/v1');
     expect(comment.source.protocolName).toBe('腹部平扫+薄层');
     expect(comment.rendering.burnedInAnnotation).toBe(true);
     expect(comment.device.model).toBe('NeuViz Epoch');
   });
 
-  it('injects an APP1 EXIF segment into JPEG bytes', async () => {
+  it('uses OverlayBurnedIn=NO when burnedInAnnotation is false', () => {
+    const payload = createJpegMetadataPayload({
+      burnedInAnnotation: false,
+      metadata: { modality: 'CT' }
+    });
+
+    expect(payload.imageDescription).toContain('OverlayBurnedIn=NO');
+  });
+
+  it('injects both ImageDescription and UserComment into JPEG bytes', async () => {
     const source = new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], {
       type: 'image/jpeg'
     });
@@ -64,6 +75,40 @@ describe('jpegMetadata', () => {
     expect(text).toContain('Exif');
     expect(text).toContain('DICOM-JPEG v1');
     expect(text).toContain('dicom-jpeg-meta/v1');
+  });
+
+  it('injects only ImageDescription when UserComment is undefined', async () => {
+    const payload = {
+      imageDescription: 'DICOM-JPEG v1 | CT',
+      userComment: undefined
+    };
+
+    const segment = createExifApp1Segment(payload);
+    const text = new TextDecoder().decode(segment);
+
+    expect(text).toContain('DICOM-JPEG v1 | CT');
+    expect(text).toContain('Exif');
+    expect(text).not.toContain('dicom-jpeg-meta');
+  });
+
+  it('injects only UserComment when ImageDescription is undefined', async () => {
+    const payload = {
+      imageDescription: undefined,
+      userComment: '{"schema":"dicom-jpeg-meta/v1"}'
+    };
+
+    const segment = createExifApp1Segment(payload);
+    const text = new TextDecoder().decode(segment);
+
+    expect(text).toContain('dicom-jpeg-meta/v1');
+    expect(text).toContain('Exif');
+    expect(text).not.toContain('DICOM-JPEG');
+  });
+
+  it('throws when both fields are undefined', () => {
+    expect(() =>
+      createExifApp1Segment({ imageDescription: undefined, userComment: undefined })
+    ).toThrow('at least one field');
   });
 });
 

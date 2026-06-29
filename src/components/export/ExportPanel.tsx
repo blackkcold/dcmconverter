@@ -476,13 +476,25 @@ export function ExportPanel() {
       <label className="checkbox-row">
         <input
           type="checkbox"
-          checked={options.includeJpegMetadata}
+          checked={options.includeJpegDescription}
           onChange={(event) =>
-            setOptions({ includeJpegMetadata: event.target.checked })
+            setOptions({ includeJpegDescription: event.target.checked })
           }
         />
-        {t('export.writeJpegMeta')}
+        {t('export.writeJpegDescription')}
       </label>
+      <p className="muted">{t('export.writeJpegDescriptionHint')}</p>
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={options.includeJpegExtendedMetadata}
+          onChange={(event) =>
+            setOptions({ includeJpegExtendedMetadata: event.target.checked })
+          }
+        />
+        {t('export.writeJpegExtendedMeta')}
+      </label>
+      <p className="muted">{t('export.writeJpegExtendedMetaHint')}</p>
       <label>
         {t('export.batchSize', { count: options.batchSize })}
         <input
@@ -537,6 +549,9 @@ export function ExportPanel() {
         </div>
       ) : null}
       {message ? <p className="inline-status">{formatLocalizedText(locale, message)}</p> : null}
+      <p className="privacy-warning">
+        {t('export.pixelPhiWarning')}
+      </p>
       {options.includePersonalInfo ? (
         <p className="privacy-warning">
           {t('export.privacyWarning')}
@@ -552,5 +567,5 @@ function triggerDownload(blob: Blob, fileName: string): void {
   anchor.href = url;
   anchor.download = fileName;
   anchor.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }

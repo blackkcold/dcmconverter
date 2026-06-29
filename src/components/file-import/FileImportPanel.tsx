@@ -1,9 +1,13 @@
 import type { ChangeEvent, DragEvent, InputHTMLAttributes } from 'react';
 import { useCallback, useRef, useState } from 'react';
 
-import type { DicomMetadata } from '@/dicom/dicomTypes';
+import type { DicomMetadata, SkippedFile } from '@/dicom/dicomTypes';
 import { ingestFiles } from '@/dicom/fileIngest';
 import { parseDicomMetadata } from '@/dicom/metadataParser';
+import {
+  getUnsupportedTransferSyntaxMessage,
+  isSupportedTransferSyntax
+} from '@/dicom/transferSyntax';
 import { useLocaleStore, useTranslator } from '@/i18n';
 import { useDicomStore } from '@/store/useDicomStore';
 
@@ -140,17 +144,44 @@ export function FileImportPanel() {
       setBusy(true);
       try {
         const result = ingestFiles(fileList, locale);
-        addFiles(result.files, result.skippedFiles);
 
-        const results = await Promise.all(
+        const metadataResults = await Promise.all(
           result.files.map(async (localFile) => {
             const metadataResult = await parseDicomMetadata(localFile.file, locale);
-            return metadataResult.ok
-              ? [localFile.id, metadataResult.value] as const
-              : null;
+            return { localFile, metadataResult };
           })
         );
-        const metadataEntries = results.filter((r): r is readonly [string, DicomMetadata] => r !== null);
+
+        const acceptedFiles = [];
+        const allSkippedFiles: SkippedFile[] = [...result.skippedFiles];
+        const metadataEntries: (readonly [string, DicomMetadata])[] = [];
+
+        for (const { localFile, metadataResult } of metadataResults) {
+          if (!metadataResult.ok) {
+            allSkippedFiles.push({
+              name: localFile.name,
+              reason: metadataResult.error.message
+            });
+            continue;
+          }
+
+          const metadata = metadataResult.value;
+          if (!isSupportedTransferSyntax(metadata.transferSyntaxUID)) {
+            allSkippedFiles.push({
+              name: localFile.name,
+              reason: getUnsupportedTransferSyntaxMessage(locale)
+            });
+            continue;
+          }
+
+          acceptedFiles.push(localFile);
+          metadataEntries.push([localFile.id, metadata]);
+        }
+
+        if (acceptedFiles.length > 0 || allSkippedFiles.length > 0) {
+          addFiles(acceptedFiles, allSkippedFiles);
+        }
+
         if (metadataEntries.length > 0) {
           batchSetMetadata(metadataEntries);
         }

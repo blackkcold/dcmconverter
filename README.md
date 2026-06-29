@@ -59,8 +59,9 @@ This project is a local-first browser tool for viewing DICOM files and exporting
 - 导出面板可设置导出包名称和 JPEG 文件名模板，模板只提供主字段组合。
 
 ### 隐私 / Privacy
-- 默认可烧录个人医疗信息；导出面板会明确提示当前模式。
+- 默认匿名导出：PatientName 显示为 `Anonymous`，PatientID 显示为 `Hidden`；仅在用户显式开启个人信息模式时才会烧录患者信息。
 - 不支持静默扫描本地磁盘路径，必须由用户通过文件/目录选择器授权。
+- 导出报告和断点续传 manifest 不写入原始源目录结构，避免泄露按患者或机构组织的本地路径。
 - JPEG 底部固定显示 `Non-diagnostic JPEG · Exported from local DICOM tool`。
 
 > [!NOTE]
