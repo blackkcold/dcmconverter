@@ -33,6 +33,22 @@ describe('exportJobBuilder', () => {
     expect(result.jobs.map((job) => job.fileId)).toEqual(['second', 'first']);
   });
 
+  it('does not persist source relative paths in export jobs', () => {
+    const file = localFile('file_a', 'patient-name/study/a.dcm');
+    const result = buildExportJobs({
+      files: [file],
+      studies: [],
+      activeFileId: file.id,
+      options: { ...DEFAULT_EXPORT_OPTIONS, scope: 'all' },
+      metadataByFileId: {
+        [file.id]: { studyDate: '20260612', modality: 'CT' }
+      }
+    });
+
+    expect(result.jobs[0]).not.toHaveProperty('sourceRelativePath');
+    expect(JSON.stringify(result.jobs)).not.toContain('patient-name');
+  });
+
   it('splits jobs into stable batches', () => {
     expect(splitIntoBatches([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
   });

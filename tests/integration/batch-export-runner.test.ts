@@ -139,7 +139,6 @@ describe('SerialBatchExportRunner', () => {
         batchIndex: 0,
         outputFileName: 'a.jpg',
         outputRelativePath: 'a.jpg',
-        sourceRelativePath: 'a.dcm',
         retryCount: 0,
         metadataHash: 'metadata',
         optionsHash: 'options'
@@ -151,7 +150,6 @@ describe('SerialBatchExportRunner', () => {
         batchIndex: 0,
         outputFileName: 'b.jpg',
         outputRelativePath: 'b.jpg',
-        sourceRelativePath: 'b.dcm',
         retryCount: 1,
         metadataHash: 'metadata',
         optionsHash: 'options'

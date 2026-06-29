@@ -3,8 +3,8 @@ import { createTranslator, getCurrentLocale, type Locale } from '@/i18n';
 import type { WindowLevel } from '@/viewer/viewerTypes';
 
 export interface JpegMetadataPayload {
-  imageDescription: string;
-  userComment: string;
+  imageDescription: string | undefined;
+  userComment: string | undefined;
 }
 
 export interface CreateJpegMetadataInput {
@@ -135,48 +135,74 @@ export function createExifApp1Segment(payload: JpegMetadataPayload): Uint8Array 
 }
 
 function createTiffPayload(payload: JpegMetadataPayload): Uint8Array {
-  const imageDescriptionBytes = nullTerminatedUtf8(payload.imageDescription);
-  const userCommentBytes = concatBytes(
-    UTF8_COMMENT_PREFIX,
-    utf8Bytes(payload.userComment)
-  );
-  const ifd0EntryCount = 2;
-  const exifEntryCount = 1;
+  const imageDescriptionBytes = payload.imageDescription
+    ? nullTerminatedUtf8(payload.imageDescription)
+    : undefined;
+  const userCommentBytes = payload.userComment
+    ? concatBytes(UTF8_COMMENT_PREFIX, utf8Bytes(payload.userComment))
+    : undefined;
+
+  const hasImageDescription = Boolean(imageDescriptionBytes);
+  const hasUserComment = Boolean(userCommentBytes);
+
+  if (!hasImageDescription && !hasUserComment) {
+    throw new Error('JPEG EXIF metadata payload must have at least one field');
+  }
+
+  const ifd0EntryCount = hasImageDescription ? 1 : 0;
+  const hasExifIfd = hasUserComment;
+  const totalIfd0Entries = ifd0EntryCount + (hasExifIfd ? 1 : 0);
+
+  const exifEntryCount = hasUserComment ? 1 : 0;
   const ifd0Offset = TIFF_HEADER_LENGTH;
-  const ifd0Length = getIfdLength(ifd0EntryCount);
+  const ifd0Length = getIfdLength(totalIfd0Entries);
   const imageDescriptionOffset = ifd0Offset + ifd0Length;
-  const exifIfdOffset = imageDescriptionOffset + imageDescriptionBytes.length;
+  const exifIfdOffset = hasImageDescription
+    ? imageDescriptionOffset + (imageDescriptionBytes?.length ?? 0)
+    : imageDescriptionOffset;
   const exifIfdLength = getIfdLength(exifEntryCount);
   const userCommentOffset = exifIfdOffset + exifIfdLength;
-  const tiff = new Uint8Array(userCommentOffset + userCommentBytes.length);
+  const totalLength = hasUserComment
+    ? userCommentOffset + (userCommentBytes?.length ?? 0)
+    : imageDescriptionOffset + (imageDescriptionBytes?.length ?? 0);
+
+  const tiff = new Uint8Array(totalLength);
   const view = new DataView(tiff.buffer);
 
   writeTiffHeader(view, ifd0Offset);
-  writeIfdEntryCount(view, ifd0Offset, ifd0EntryCount);
-  writeIfdEntry(view, ifd0Offset, 0, {
-    tag: 0x010e,
-    type: 2,
-    count: imageDescriptionBytes.length,
-    valueOffset: imageDescriptionOffset
-  });
-  writeIfdEntry(view, ifd0Offset, 1, {
-    tag: 0x8769,
-    type: 4,
-    count: 1,
-    valueOffset: exifIfdOffset
-  });
-  writeNextIfdOffset(view, ifd0Offset, ifd0EntryCount, 0);
-  tiff.set(imageDescriptionBytes, imageDescriptionOffset);
+  writeIfdEntryCount(view, ifd0Offset, totalIfd0Entries);
 
-  writeIfdEntryCount(view, exifIfdOffset, exifEntryCount);
-  writeIfdEntry(view, exifIfdOffset, 0, {
-    tag: 0x9286,
-    type: 7,
-    count: userCommentBytes.length,
-    valueOffset: userCommentOffset
-  });
-  writeNextIfdOffset(view, exifIfdOffset, exifEntryCount, 0);
-  tiff.set(userCommentBytes, userCommentOffset);
+  let entryIndex = 0;
+  if (imageDescriptionBytes) {
+    writeIfdEntry(view, ifd0Offset, entryIndex, {
+      tag: 0x010e,
+      type: 2,
+      count: imageDescriptionBytes.length,
+      valueOffset: imageDescriptionOffset
+    });
+    tiff.set(imageDescriptionBytes, imageDescriptionOffset);
+    entryIndex += 1;
+  }
+
+  if (userCommentBytes) {
+    writeIfdEntry(view, ifd0Offset, entryIndex, {
+      tag: 0x8769,
+      type: 4,
+      count: 1,
+      valueOffset: exifIfdOffset
+    });
+    writeIfdEntryCount(view, exifIfdOffset, exifEntryCount);
+    writeIfdEntry(view, exifIfdOffset, 0, {
+      tag: 0x9286,
+      type: 7,
+      count: userCommentBytes.length,
+      valueOffset: userCommentOffset
+    });
+    writeNextIfdOffset(view, exifIfdOffset, exifEntryCount, 0);
+    tiff.set(userCommentBytes, userCommentOffset);
+  }
+
+  writeNextIfdOffset(view, ifd0Offset, totalIfd0Entries, 0);
 
   return tiff;
 }
@@ -197,7 +223,7 @@ function buildImageDescription(
     formatKeyValue(t('metadata.sliceThickness'), formatWithUnit(metadata.sliceThickness, 'mm')),
     formatKeyValue(t('metadata.pixelSpacing'), formatPixelSpacing(metadata.pixelSpacing)),
     formatHuTransform(metadata),
-    `BurnedIn=${burnedInAnnotation ? 'YES' : 'NO'}`
+    `OverlayBurnedIn=${burnedInAnnotation ? 'YES' : 'NO'}`
   ].filter((part): part is string => Boolean(part));
 
   return parts.join(' | ');

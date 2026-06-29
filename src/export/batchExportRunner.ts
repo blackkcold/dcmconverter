@@ -230,17 +230,35 @@ export class SerialBatchExportRunner {
         );
       }
 
-      const encoded = await encodeCanvasToJpeg(
-        canvas,
-        this.params.options.jpegQuality,
-        this.params.options.includeJpegMetadata
+      const options = this.params.options;
+      const includeJpegDescription = options.includeJpegDescription;
+      const includeJpegExtendedMetadata = options.includeJpegExtendedMetadata;
+
+      const metadataPayload =
+        includeJpegDescription || includeJpegExtendedMetadata
           ? createJpegMetadataPayload({
               metadata,
               windowLevel,
-              burnedInAnnotation: this.params.options.includeOverlay,
+              burnedInAnnotation: options.includeOverlay,
               locale: this.locale
             })
-          : undefined,
+          : undefined;
+
+      const filteredPayload = metadataPayload
+        ? {
+            imageDescription: includeJpegDescription
+              ? metadataPayload.imageDescription
+              : undefined,
+            userComment: includeJpegExtendedMetadata
+              ? metadataPayload.userComment
+              : undefined
+          }
+        : undefined;
+
+      const encoded = await encodeCanvasToJpeg(
+        canvas,
+        options.jpegQuality,
+        filteredPayload,
         this.locale
       );
 

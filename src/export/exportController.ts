@@ -36,17 +36,34 @@ export async function exportCanvasAsJpeg(params: {
     );
   }
 
-  const encoded = await encodeCanvasToJpeg(
-    canvas,
-    params.options.jpegQuality,
-    params.options.includeJpegMetadata
+  const includeJpegDescription = params.options.includeJpegDescription;
+  const includeJpegExtendedMetadata = params.options.includeJpegExtendedMetadata;
+
+  const metadataPayload =
+    includeJpegDescription || includeJpegExtendedMetadata
       ? createJpegMetadataPayload({
           metadata,
           burnedInAnnotation: params.options.includeOverlay,
           ...(params.windowLevel ? { windowLevel: params.windowLevel } : {}),
           locale
         })
-      : undefined,
+      : undefined;
+
+  const filteredPayload = metadataPayload
+    ? {
+        imageDescription: includeJpegDescription
+          ? metadataPayload.imageDescription
+          : undefined,
+        userComment: includeJpegExtendedMetadata
+          ? metadataPayload.userComment
+          : undefined
+      }
+    : undefined;
+
+  const encoded = await encodeCanvasToJpeg(
+    canvas,
+    params.options.jpegQuality,
+    filteredPayload,
     locale
   );
   if (!encoded.ok) {

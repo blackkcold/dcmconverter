@@ -13,6 +13,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+<<<<<<< HEAD
+### Docs
+
+## [v0.5.5] - 2026-06-29
+
+### Added
+
+- Import boundary Transfer Syntax validation: files with unsupported TS now skip before entering the store, with clear user-facing skip reason.
+- Pixel PHI permanent warning in export panel — always visible, not conditional on personal-info mode.
+
+### Fixed
+
+- Unparseable DICOM metadata no longer silently enters the store; files that fail parsing are reported as skipped.
+- `useExportStore.resetJobs()` now clears `targetDirectoryName` alongside jobs and counters.
+- ZIP download `URL.revokeObjectURL` now delayed by 5s to avoid race conditions in some browsers.
+
+### Changed
+
+- Split `includeJpegMetadata` into `includeJpegDescription` (default on, writes `ImageDescription` only) and `includeJpegExtendedMetadata` (default off, writes `UserComment` JSON).
+- Renamed JPEG EXIF `BurnedIn=` field to `OverlayBurnedIn=` for semantic clarity.
+
+### Docs
+
+- Document JPEG EXIF field split in EXPORT_SPEC.
+- Update SECURITY_PRIVACY to note permanent pixel-PHI warning in UI.
+- Document new tests in TEST_PLAN.
+
 ## [v0.6.0] - 2026-06-24
 
 ### Added
@@ -22,7 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Changed
-
 ## [v0.5.1] - 2026-06-24
 
 ### Added

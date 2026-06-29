@@ -24,13 +24,18 @@ Local DICOM JPEG Tool provides a browser-based local tool that lets users explic
 3. 解析 metadata 并按 Study / Series / Instance 分组。
 4. 用户选择实例并在 viewer 中查看。
 5. 用户在导出面板里设置导出包名称和文件名模板，再导出 JPEG。
+6. 默认导出使用匿名 overlay；用户显式开启个人信息模式前，不烧录 PatientName / PatientID 原文。
 
 1. The user selects DICOM files or a folder.
 2. The tool collects candidate DICOM files and skips obvious non-DICOM files.
 3. Metadata is parsed and grouped by Study / Series / Instance.
 4. The user selects an instance and views it in the viewer.
 5. The user sets the export package name and filename template in the export panel, then exports JPEGs.
+6. Exports use an anonymized overlay by default; PatientName / PatientID are not burned in until the user explicitly enables personal-info mode.
 
 ## 导出命名 / Export Naming
 导出包名称会同时驱动 folder export 根目录和 ZIP 下载名；JPEG 文件名模板只提供主字段组合，不支持自由文本拼接。<br>
 The export package name drives both the folder-export root directory and the ZIP download name; JPEG filename templates only provide main-field combinations and do not support free-text composition.
+
+导出报告和断点续传 manifest 只记录导出相对路径，不记录原始源目录结构。<br>
+Export reports and resume manifests record output-relative paths only, not the original source directory structure.

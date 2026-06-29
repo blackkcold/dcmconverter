@@ -40,7 +40,7 @@ export function JobProgressPanel() {
               {t('jobs.runningBatch', {
                 current: runningJob.batchIndex + 1,
                 total: totalBatches,
-                path: runningJob.sourceRelativePath
+                path: runningJob.outputRelativePath
               })}
             </p>
           ) : null}

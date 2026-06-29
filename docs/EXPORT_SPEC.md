@@ -15,7 +15,8 @@
 - 序号按输出目录分别递增，保证文件管理器按名称排序时符合 DICOM 顺序。<br>The sequence number increments independently per output directory so file managers sort in DICOM order by name.
 - 文件名模板仍保留序号前缀和重名兜底后缀，由系统自动补齐。<br>The filename template still gets a sequence prefix and duplicate-name suffix automatically from the system.
 - 可在导出阶段覆盖 PatientName / PatientSex / PatientAge；不修改源 DICOM 文件。<br>PatientName / PatientSex / PatientAge can be overridden during export; the source DICOM file is not modified.
-- 默认写入 JPEG EXIF `ImageDescription` 和 `UserComment`，保存内部查看所需的非 PHI DICOM 摘要。<br>By default, JPEG EXIF `ImageDescription` and `UserComment` are written to preserve the non-PHI DICOM summary needed for internal review.
+- 默认写入 JPEG EXIF `ImageDescription`（`includeJpegDescription`，默认开），保存底部固定声明与关键渲染参数。`UserComment`（`includeJpegExtendedMetadata`，默认关）保存非 PHI 结构化摘要。<br>By default, JPEG EXIF `ImageDescription` is written (`includeJpegDescription`, on by default), preserving the footer declaration and key rendering parameters. `UserComment` (`includeJpegExtendedMetadata`, off by default) preserves a structured non-PHI summary.
+- `ImageDescription` 中 overlay 烧录状态字段名为 `OverlayBurnedIn=`。<br>The overlay burn-in status field in `ImageDescription` is named `OverlayBurnedIn=`.
 
 ## 批量导出 / Batch Export
 

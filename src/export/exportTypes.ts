@@ -19,7 +19,8 @@ export interface ExportOptions {
   includePersonalInfo: boolean;
   patientOverrideEnabled: boolean;
   patientOverride: PatientMetadataOverride;
-  includeJpegMetadata: boolean;
+  includeJpegDescription: boolean;
+  includeJpegExtendedMetadata: boolean;
   overlayPosition: 'right' | 'bottom';
   useCurrentWindowLevel: boolean;
   batchSize: number;
@@ -57,7 +58,6 @@ export interface ExportJob {
   batchIndex: number;
   outputFileName: string;
   outputRelativePath: string;
-  sourceRelativePath: string;
   retryCount: number;
   metadataHash: string;
   optionsHash: string;
@@ -90,10 +90,11 @@ export const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   jpegQuality: 0.92,
   includeOverlay: true,
   anonymizeOverlay: true,
-  includePersonalInfo: true,
+  includePersonalInfo: false,
   patientOverrideEnabled: false,
   patientOverride: {},
-  includeJpegMetadata: true,
+  includeJpegDescription: true,
+  includeJpegExtendedMetadata: false,
   overlayPosition: 'right',
   useCurrentWindowLevel: true,
   batchSize: 25,

@@ -81,6 +81,7 @@ describe('export pipeline', () => {
       },
       options: {
         ...DEFAULT_EXPORT_OPTIONS,
+        includePersonalInfo: true,
         patientOverrideEnabled: true,
         patientOverride: {
           patientName: 'Manual Name',

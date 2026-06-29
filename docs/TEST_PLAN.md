@@ -10,6 +10,7 @@
 - `fileNamer`：序号前缀和冲突兜底。<br>`fileNamer`: sequence prefixing and collision fallback.
 - `overlayRenderer`：匿名字段、水印和关键字段。<br>`overlayRenderer`: anonymized fields, watermarks, and key fields.
 - `jpegEncoder`：JPEG MIME 与失败处理。<br>`jpegEncoder`: JPEG MIME handling and failure cases.
+- `jpegMetadata`：EXIF 字段拆分（ImageDescription-only / UserComment-only / 全量 / 空 payload 报错）、`OverlayBurnedIn` 命名验证。<br>`jpegMetadata`: EXIF field splitting (ImageDescription-only / UserComment-only / full / empty payload error), `OverlayBurnedIn` naming verification.
 - `zipExporter`：多文件打包。<br>`zipExporter`: multi-file packaging.
 - `exportJobBuilder`：稳定排序、批次切分、导出包前缀、`outputRelativePath`、`optionsHash`。<br>`exportJobBuilder`: stable sorting, batch splitting, export package prefixes, `outputRelativePath`, and `optionsHash`.
 - `exportManifest`：断点跳过和参数变化重导出。<br>`exportManifest`: resume skipping and re-export on parameter changes.

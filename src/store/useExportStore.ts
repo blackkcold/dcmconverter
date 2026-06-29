@@ -57,6 +57,7 @@ export const useExportStore = create<ExportStore>((set) => ({
       jobs: [],
       running: false,
       paused: false,
+      targetDirectoryName: undefined,
       completedCount: 0,
       failedCount: 0,
       skippedCount: 0

@@ -14,7 +14,6 @@ function job(fileId: string, optionsHash = 'options'): ExportJob {
     batchIndex: 0,
     outputFileName: `${fileId}.jpg`,
     outputRelativePath: `${fileId}.jpg`,
-    sourceRelativePath: `${fileId}.dcm`,
     retryCount: 0,
     metadataHash: 'metadata',
     optionsHash
@@ -34,6 +33,17 @@ describe('exportManifest', () => {
     const [resumed] = applyResumeManifest([job('a')], manifest, 'options');
 
     expect(resumed?.status).toBe('skipped');
+  });
+
+  it('serializes jobs without source relative paths', () => {
+    const manifest = createExportManifest({
+      datasetHash: 'dataset',
+      optionsHash: 'options',
+      jobs: [job('patient-folder')]
+    });
+
+    expect(JSON.stringify(manifest)).not.toContain('sourceRelativePath');
+    expect(JSON.stringify(manifest)).not.toContain('patient-folder.dcm');
   });
 
   it('does not skip when export options changed', () => {
