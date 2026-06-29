@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Fixed
+
+### Changed
+
+### Docs
+
+## [v0.5.5] - 2026-06-29
+
+### Added
+
 - Import boundary Transfer Syntax validation: files with unsupported TS now skip before entering the store, with clear user-facing skip reason.
 - Pixel PHI permanent warning in export panel — always visible, not conditional on personal-info mode.
 
